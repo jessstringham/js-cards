@@ -1,0 +1,124 @@
+<html>
+<head>
+<title>jessicas' Forms Form</title>
+<script src="d3.v3.min.js" charset="utf-8"></script>
+<script src="jquery.min.js"></script>
+
+<script>
+
+
+function applyRuleToExample(rule, example) {
+    var result;
+
+    result = rule.replace("[term]", example)
+
+    return result;
+}
+
+
+function pairOffData(x, y) {
+    result = [];
+    for (var height=0; height < y.length; height++) {
+        var newList = [];
+        for (var width=0; width < x.length; width++) {
+            newList.push(applyRuleToExample(x[width], y[height]));
+        }
+        result.push(newList);
+    }
+
+    return result;
+}
+
+
+function initGrid() {
+
+}
+
+function updateGrid() {
+
+    var matrix = pairOffData(
+        d3.selectAll(".rule")[0].map(function(d) {return $(d).val()}),
+        d3.selectAll(".example")[0].map(function(d) {return $(d).val()})
+    );
+
+    console.log(matrix);
+
+    var tr = d3.select("#grid table").selectAll("tr")
+        .data(matrix);
+
+    tr.enter().append('tr');
+
+    var td = tr.selectAll("td")
+        .data(function (d) {console.log(d); return d;});
+
+    td.enter().append('td');
+
+    // update old values
+    td.text(function (d) {return d;});
+
+
+
+}
+
+
+function main() {
+    var current_width_of_grid = 5;
+    var current_height_of_grid = 10;
+
+    d3.select("#rule").selectAll("input")
+        .data(d3.range(current_width_of_grid))
+        .enter()
+        .append("input")
+        .attr("class", "rule")
+        .on("keyup", updateGrid);
+
+
+    d3.select("#examples").selectAll("input")
+        .data(d3.range(current_height_of_grid))
+        .enter()
+        .append("div")
+        .append("input")
+        .attr("class", "example")
+        .on("keyup", updateGrid);
+
+
+    updateGrid();
+
+}
+
+
+$(document).ready(function () {
+    main();
+})
+
+
+
+</script>
+
+</head>
+<body>
+<h1>Welcome to the form forms of formulation!</h1>
+<p>Oh dear, that name has got to go</p>
+
+<h2>Step 1: Give me some info</h2>
+<p>Enter some words</p>
+
+<h3>The Grid</h3>
+<div id="grid">
+<table></table>
+</div>
+
+<h3>Rule</h3>
+<div id="rule">
+</div>
+
+<h3>Examples</h3>
+<div id="examples">
+</div>
+
+
+
+
+
+</body>
+</html>
