@@ -8,9 +8,26 @@
 
 
 function applyRuleToExample(rule, example) {
-    var result;
+    var result, final_result;
 
     result = rule.replace("[term]", example)
+
+    var match = /\((.+?)->(.+?)\)/g.exec(result);
+
+    if (match) {
+        result = result.replace(/\(.+?->.+?\)/, "")
+
+        // get the string right before it
+        replace_this_string_len = match[1].length;
+
+        could_be_a_match = result.substr(match.index - replace_this_string_len, replace_this_string_len);
+
+        if (could_be_a_match == match[1]) {
+            result = result.substr(0, match.index - replace_this_string_len)
+                + match[2]
+                + result.substr(match.index, result.length - 1);
+        }
+    }
 
     return result;
 }
@@ -30,10 +47,6 @@ function pairOffData(x, y) {
 }
 
 
-function initGrid() {
-
-}
-
 function updateGrid() {
 
     var matrix = pairOffData(
@@ -41,15 +54,13 @@ function updateGrid() {
         d3.selectAll(".example")[0].map(function(d) {return $(d).val()})
     );
 
-    console.log(matrix);
-
     var tr = d3.select("#grid table").selectAll("tr")
         .data(matrix);
 
     tr.enter().append('tr');
 
     var td = tr.selectAll("td")
-        .data(function (d) {console.log(d); return d;});
+        .data(function (d) {return d;});
 
     td.enter().append('td');
 
@@ -62,8 +73,8 @@ function updateGrid() {
 
 
 function main() {
-    var current_width_of_grid = 5;
-    var current_height_of_grid = 10;
+    var current_width_of_grid = 1;
+    var current_height_of_grid = 1;
 
     d3.select("#rule").selectAll("input")
         .data(d3.range(current_width_of_grid))
@@ -80,7 +91,6 @@ function main() {
         .append("input")
         .attr("class", "example")
         .on("keyup", updateGrid);
-
 
     updateGrid();
 
@@ -111,6 +121,7 @@ $(document).ready(function () {
 <h3>Rule</h3>
 <div id="rule">
 </div>
+
 
 <h3>Examples</h3>
 <div id="examples">
