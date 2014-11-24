@@ -54,7 +54,7 @@ function updateGrid() {
         d3.selectAll(".example")[0].map(function(d) {return $(d).val()})
     );
 
-    var tr = d3.select("#grid table").selectAll("tr")
+    var tr = d3.select("#grid table tbody").selectAll("tr")
         .data(matrix);
 
     tr.enter().append('tr');
@@ -67,14 +67,12 @@ function updateGrid() {
     // update old values
     td.text(function (d) {return d;});
 
-
-
 }
 
 
 function main() {
-    var current_width_of_grid = 1;
-    var current_height_of_grid = 1;
+    var current_width_of_grid = 5;
+    var current_height_of_grid = 10;
 
     d3.select("#rule").selectAll("input")
         .data(d3.range(current_width_of_grid))
@@ -115,7 +113,10 @@ $(document).ready(function () {
 
 <h3>The Grid</h3>
 <div id="grid">
-<table></table>
+<table>
+<thead></thead>
+<tbody></tbody>
+</table>
 </div>
 
 <h3>Rule</h3>
