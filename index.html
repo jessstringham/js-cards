@@ -38,13 +38,22 @@ function applyRuleToExample(rule, example) {
 }
 
 
-function pairOffData(x, y) {
+function pairOffData(rules, translated_rules, examples, translated_examples) {
 
     result = [];
-    for (var height=0; height < y.length; height++) {
+    for (var example_i=0; example_i < examples.length; example_i++) {
         var newList = [];
-        for (var width=0; width < x.length; width++) {
-            newList.push(applyRuleToExample(x[width], y[height]));
+        for (var rule_i=0; rule_i < rules.length; rule_i++) {
+            newList.push({
+                "result": applyRuleToExample(
+                    rules[rule_i],
+                    examples[example_i]
+                ),
+                "translated_result": applyRuleToExample(
+                    translated_rules[rule_i],
+                    translated_examples[example_i]
+                ),
+            });
         }
         result.push(newList);
     }
@@ -57,7 +66,9 @@ function updateGrid() {
 
     var matrix = pairOffData(
         d3.selectAll(".rule")[0].map(function(d) {return $(d).val()}),
-        d3.selectAll(".example")[0].map(function(d) {return $(d).val()})
+        d3.selectAll(".translated_rule")[0].map(function(d) {return $(d).val()}),
+        d3.selectAll(".example")[0].map(function(d) {return $(d).val()}),
+        d3.selectAll(".translated_example")[0].map(function(d) {return $(d).val()})
     );
 
     var tr = d3.selectAll('tbody tr')
@@ -72,7 +83,7 @@ function updateGrid() {
     td.enter().append('td');
 
     // update old values
-    td.text(function (d) {return d;});
+    td.text(function (d) {return d.result + " " + d.translated_result;});
 
 }
 
@@ -81,7 +92,7 @@ function main() {
     var current_width_of_grid = 5;
     var current_height_of_grid = 10;
 
-    var headers = d3.select("#grid thead").selectAll("th")
+    var headers = d3.select("#grid thead.row1").selectAll("th")
         .data(d3.range(1 + current_width_of_grid))
         .enter()
         .append("th");
@@ -91,14 +102,30 @@ function main() {
         .attr("class", "rule")
         .on("keyup", updateGrid);
 
+    var second_headers = d3.select("#grid thead.row2").selectAll("th")
+        .data(d3.range(1 + current_width_of_grid))
+        .enter()
+        .append("th");
+
+    second_headers.filter(function(d, i) {return i != 0;})
+        .append("input")
+        .attr("class", "translated_rule")
+        .on("keyup", updateGrid);
+
+
     var rows = d3.select("#grid tbody").selectAll("tr")
         .data(d3.range(1 + current_height_of_grid))
         .enter()
         .append("tr");
 
-    rows.append("td")
-        .append("input")
+    var tds = rows.append("td");
+
+    tds.append("div").append("input")
         .attr("class", "example")
+        .on("keyup", updateGrid);
+
+    tds.append("div").append("input")
+        .attr("class", "translated_example")
         .on("keyup", updateGrid);
 
     rows.selectAll("td")
@@ -130,7 +157,8 @@ $(document).ready(function () {
 
 <div id="grid">
 <table>
-<thead></thead>
+<thead class="row1"></thead>
+<thead class="row2"></thead>
 <tbody></tbody>
 </table>
 </div>
