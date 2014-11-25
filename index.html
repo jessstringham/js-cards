@@ -8,6 +8,11 @@
 
 
 function applyRuleToExample(rule, example) {
+
+    if (example == "") {
+        return "";
+    }
+
     var result, final_result;
 
     result = rule.replace("[term]", example)
@@ -34,6 +39,7 @@ function applyRuleToExample(rule, example) {
 
 
 function pairOffData(x, y) {
+
     result = [];
     for (var height=0; height < y.length; height++) {
         var newList = [];
@@ -54,12 +60,13 @@ function updateGrid() {
         d3.selectAll(".example")[0].map(function(d) {return $(d).val()})
     );
 
-    var tr = d3.select("#grid table tbody").selectAll("tr")
+    var tr = d3.selectAll('tbody tr')
         .data(matrix);
 
     tr.enter().append('tr');
 
     var td = tr.selectAll("td")
+        .filter(function(d, i) {return i != 0;})
         .data(function (d) {return d;});
 
     td.enter().append('td');
@@ -74,21 +81,31 @@ function main() {
     var current_width_of_grid = 5;
     var current_height_of_grid = 10;
 
-    d3.select("#rule").selectAll("input")
-        .data(d3.range(current_width_of_grid))
+    var headers = d3.select("#grid thead").selectAll("th")
+        .data(d3.range(1 + current_width_of_grid))
         .enter()
+        .append("th");
+
+    headers.filter(function(d, i) {return i != 0;})
         .append("input")
         .attr("class", "rule")
         .on("keyup", updateGrid);
 
-
-    d3.select("#examples").selectAll("input")
-        .data(d3.range(current_height_of_grid))
+    var rows = d3.select("#grid tbody").selectAll("tr")
+        .data(d3.range(1 + current_height_of_grid))
         .enter()
-        .append("div")
+        .append("tr");
+
+    rows.append("td")
         .append("input")
         .attr("class", "example")
         .on("keyup", updateGrid);
+
+    rows.selectAll("td")
+        .data(d3.range(1 + current_width_of_grid))
+        .enter()
+        .append("td")
+        .attr("class", "result");
 
     updateGrid();
 
@@ -109,27 +126,14 @@ $(document).ready(function () {
 <p>Oh dear, that name has got to go</p>
 
 <h2>Step 1: Give me some info</h2>
-<p>Enter some words</p>
+<p>Enter some words and rules!</p>
 
-<h3>The Grid</h3>
 <div id="grid">
 <table>
 <thead></thead>
 <tbody></tbody>
 </table>
 </div>
-
-<h3>Rule</h3>
-<div id="rule">
-</div>
-
-
-<h3>Examples</h3>
-<div id="examples">
-</div>
-
-
-
 
 
 </body>
