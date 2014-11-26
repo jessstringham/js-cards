@@ -63,6 +63,35 @@ function pairOffData(rules, translated_rules, examples, translated_examples) {
 }
 
 
+function hoizontalPlusMinus(cell) {
+    cell.selectAll("*").remove();
+
+    cell.append('div')
+        .text('-');
+
+    cell.append('div')
+        .text('+');
+}
+
+
+function verticalPlusMinus(cell) {
+    cell.selectAll("*").remove();
+
+    cell.append('span')
+        .text('-');
+
+    cell.append('span')
+        .text('+')
+      .on("click", function () {
+        console.log(current_width_of_grid);
+        current_width_of_grid += 1;
+        main();
+      });
+}
+
+
+
+
 function updateGrid() {
 
     var matrix = pairOffData(
@@ -96,11 +125,7 @@ function updateGrid() {
 
     first_td = last_tr.append('td');
 
-    first_td.append('span')
-        .text('-');
-
-    first_td.append('span')
-        .text('+');
+    verticalPlusMinus(first_td);
 
     last_tr.selectAll('td')
         .data(d3.range(1 + current_width_of_grid))
@@ -108,45 +133,45 @@ function updateGrid() {
         .append('td');
 
     last_tr.append('td');
-
 }
 
-
-function main() {
-
-    var header = d3.select("#grid thead.row1")
-
-    var th = header.selectAll("th")
-        .data(d3.range(1 + current_width_of_grid))
-        .enter()
-        .append("th");
-
-    var input_things = th.filter(function(d, i) {return i != 0;});
-
-    input_things.append("div")
+function attachInput(cells) {
+    cells.append("div")
         .append("input")
         .attr("value", "[term]")
         .attr("class", "rule")
         .on("keyup", updateGrid);
 
-    input_things.append("div")
+    cells.append("div")
         .append("input")
         .attr("value", "[term]")
         .attr("class", "translated_rule")
         .on("keyup", updateGrid);
+}
+
+
+function drawGrid() {
+    var header = d3.select("#grid thead.row1")
+
+    var th = header.selectAll("th")
+        .data(d3.range(1 + current_width_of_grid))
+      .enter()
+        .append("th");
 
     last_th = header.append('th');
 
-    last_th.append('div')
-        .text('-');
+    hoizontalPlusMinus(last_th);
 
-    last_th.append('div')
-        .text('+');
+    var input_things = th.filter(
+        function(d, i) {
+            return i != 0 && i != current_width_of_grid + 1;
+        });
 
+    attachInput(input_things);
 
     var rows = d3.select("#grid tbody").selectAll("tr")
         .data(d3.range(1 + current_height_of_grid))
-        .enter()
+      .enter()
         .append("tr");
 
     var tds = rows.append("td");
@@ -164,6 +189,12 @@ function main() {
         .enter()
         .append("td")
         .attr("class", "result");
+}
+
+
+function main() {
+
+    drawGrid();
 
     updateGrid();
 
