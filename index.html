@@ -99,6 +99,7 @@ function main() {
 
     headers.filter(function(d, i) {return i != 0;})
         .append("input")
+        .attr("value", "[term]")
         .attr("class", "rule")
         .on("keyup", updateGrid);
 
@@ -109,6 +110,7 @@ function main() {
 
     second_headers.filter(function(d, i) {return i != 0;})
         .append("input")
+        .attr("value", "[term]")
         .attr("class", "translated_rule")
         .on("keyup", updateGrid);
 
