@@ -94,8 +94,13 @@ function updateGrid() {
     var last_tr = d3.select('tbody')
         .append('tr');
 
-    last_tr.append('td')
-      .text('+');
+    first_td = last_tr.append('td');
+
+    first_td.append('span')
+        .text('-');
+
+    first_td.append('span')
+        .text('+');
 
     last_tr.selectAll('td')
         .data(d3.range(1 + current_width_of_grid))
@@ -130,8 +135,14 @@ function main() {
         .attr("class", "translated_rule")
         .on("keyup", updateGrid);
 
-    header.append('th')
+    last_th = header.append('th');
+
+    last_th.append('div')
+        .text('-');
+
+    last_th.append('div')
         .text('+');
+
 
     var rows = d3.select("#grid tbody").selectAll("tr")
         .data(d3.range(1 + current_height_of_grid))
