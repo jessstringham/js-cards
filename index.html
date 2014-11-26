@@ -5,7 +5,8 @@
 <script src="jquery.min.js"></script>
 
 <script>
-
+var current_width_of_grid = 4;
+var current_height_of_grid = 8;
 
 function applyRuleToExample(rule, example) {
 
@@ -88,35 +89,49 @@ function updateGrid() {
     td.append('div').text(function (d) {return d.result;});
     td.append('div').text(function (d) {return d.translated_result;});
 
+    tr.append('td'); // put one more td at the end
+
+    var last_tr = d3.select('tbody')
+        .append('tr');
+
+    last_tr.append('td')
+      .text('+');
+
+    last_tr.selectAll('td')
+        .data(d3.range(1 + current_width_of_grid))
+      .enter()
+        .append('td');
+
+    last_tr.append('td');
+
 }
 
 
 function main() {
-    var current_width_of_grid = 5;
-    var current_height_of_grid = 10;
 
-    var headers = d3.select("#grid thead.row1").selectAll("th")
+    var header = d3.select("#grid thead.row1")
+
+    var th = header.selectAll("th")
         .data(d3.range(1 + current_width_of_grid))
         .enter()
         .append("th");
 
-    headers.filter(function(d, i) {return i != 0;})
+    var input_things = th.filter(function(d, i) {return i != 0;});
+
+    input_things.append("div")
         .append("input")
         .attr("value", "[term]")
         .attr("class", "rule")
         .on("keyup", updateGrid);
 
-    var second_headers = d3.select("#grid thead.row2").selectAll("th")
-        .data(d3.range(1 + current_width_of_grid))
-        .enter()
-        .append("th");
-
-    second_headers.filter(function(d, i) {return i != 0;})
+    input_things.append("div")
         .append("input")
         .attr("value", "[term]")
         .attr("class", "translated_rule")
         .on("keyup", updateGrid);
 
+    header.append('th')
+        .text('+');
 
     var rows = d3.select("#grid tbody").selectAll("tr")
         .data(d3.range(1 + current_height_of_grid))
