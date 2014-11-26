@@ -83,7 +83,10 @@ function updateGrid() {
     td.enter().append('td');
 
     // update old values
-    td.text(function (d) {return d.result + " " + d.translated_result;});
+
+    td.selectAll("*").remove();
+    td.append('div').text(function (d) {return d.result;});
+    td.append('div').text(function (d) {return d.translated_result;});
 
 }
 
