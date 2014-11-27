@@ -63,7 +63,7 @@ function pairOffData(rules, translated_rules, examples, translated_examples) {
 }
 
 
-function hoizontalPlusMinus(cell) {
+function addHoizontalPlusMinus(cell) {
     cell.selectAll("*").remove();
 
     cell.append('div')
@@ -83,13 +83,17 @@ function verticalPlusMinus(cell) {
     cell.append('span')
         .text('+')
       .on("click", function () {
-        console.log(current_width_of_grid);
-        current_width_of_grid += 1;
+        console.log(current_height_of_grid);
+        current_height_of_grid += 1;
         main();
       });
 }
 
-
+function updateCellWithResult(cell) {
+    cell.selectAll("*").remove();
+    cell.append('div').text(function (d) {return d.result;});
+    cell.append('div').text(function (d) {return d.translated_result;}); 
+}
 
 
 function updateGrid() {
@@ -114,9 +118,7 @@ function updateGrid() {
 
     // update old values
 
-    td.selectAll("*").remove();
-    td.append('div').text(function (d) {return d.result;});
-    td.append('div').text(function (d) {return d.translated_result;});
+    updateCellWithResult(td);
 
     tr.append('td'); // put one more td at the end
 
@@ -160,7 +162,7 @@ function drawGrid() {
 
     last_th = header.append('th');
 
-    hoizontalPlusMinus(last_th);
+    addHoizontalPlusMinus(last_th);
 
     var input_things = th.filter(
         function(d, i) {
