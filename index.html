@@ -73,6 +73,30 @@ function updateAllData() {
     return blank;
 }
 
+function addRule() {
+    rule_count += 1;
+
+    allData.rules.push({
+        target: "[term]",
+        source: "[term]",
+    })
+
+    drawGrid();
+    updateGrid();
+}
+
+function addExample() {
+    example_count += 1;
+
+    allData.examples.push({
+        target: "",
+        source: "",
+    })
+
+    drawGrid();
+    updateGrid();
+}
+
 
 function applyRuleToExample(rule, example) {
 
@@ -130,49 +154,9 @@ function pairOffData(allData) {
 }
 
 
-function addHoizontalPlusMinus(cell) {
-    cell.selectAll("*").remove();
-
-    cell.append('div')
-        .text('-');
-
-    cell.append('div')
-        .text('+');
-}
 
 
-function verticalPlusMinus(cell) {
-    cell.selectAll("*").remove();
 
-    cell.append('span')
-        .text('-');
-
-    cell.append('span')
-        .text('+')
-      .on("click", function () {
-        example_count += 1;
-        main();
-      });
-}
-
-
-function addPlusMinuses() {
-    tr.append('td'); // put one more td at the end
-
-    var last_tr = d3.select('tbody')
-        .append('tr');
-
-    first_td = last_tr.append('td');
-
-    verticalPlusMinus(first_td);
-
-    last_tr.selectAll('td')
-        .data(d3.range(rule_count))
-      .enter()
-        .append('td');
-
-    last_tr.append('td');
-}
 
 
 function updateGrid() {
@@ -180,10 +164,8 @@ function updateGrid() {
 
     var matrix = pairOffData(allData);
 
-    var tr = d3.selectAll('tbody tr')
+    var tr = d3.selectAll('tbody tr.example')
         .data(matrix);
-
-    tr.enter().append('tr');
 
     var td = tr.selectAll("td.result")
         .data(function (d) {return d;})
@@ -199,7 +181,7 @@ function updateGrid() {
     td.exit().remove();
 }
 
-function attachInput(cells) {
+function attachRuleInput(cells) {
     cells.append("div")
         .append("input")
         .attr("value", function (d) {return d.source;})
@@ -215,18 +197,13 @@ function attachInput(cells) {
 
 
 function makeHeader(header) {
-    var th = header.selectAll("th")
+    var th = header.selectAll("th.rule")
         .data(allData.rules)
       .enter()
-        .append("th");
+        .append("th")
+        .attr("class", "rule");
 
-    header.insert("th", ":first-child");
-
-    attachInput(th);
-
-    last_th = header.append('th');
-
-    addHoizontalPlusMinus(last_th);
+    attachRuleInput(th);
 }
 
 
@@ -244,10 +221,11 @@ function addExampleInputs(tds) {
 }
 
 function makeRows(tbody) {
-    var rows = tbody.selectAll("tr")
+    var rows = tbody.selectAll("tr.example")
         .data(allData.examples)
       .enter()
-        .append("tr");
+        .append("tr")
+        .attr("class", "example");
 
     var tds = rows.append("td");
 
@@ -259,10 +237,55 @@ function makeRows(tbody) {
 function drawGrid() {
     makeHeader(d3.select("#grid thead"));
     makeRows(d3.select("#grid tbody"));
+    appendPlusMinusGrid();
+}
+
+function addExamplePlusMinus() {
+
+    var tr = d3.select('tbody')
+        .append('tr');
+
+    tr.attr('class', 'plusMinus');
+
+    var cell = tr.append('td');
+        
+
+    cell.selectAll("*").remove();
+
+    cell.append('span')
+        .text('-');
+
+    cell.append('span')
+        .text('+')
+      .on("click", addExample);
 }
 
 
+function addRulePlusMinus() {
+    cell = d3.select("#grid thead")
+        .append('th')
+        .attr('class', 'plusMinus');
+
+    cell.selectAll("*").remove();
+
+    cell.append('div')
+        .text('-');
+
+    cell.append('div')
+        .text('+')
+      .on("click", addRule);
+}
+
+
+function appendPlusMinusGrid() {
+    d3.selectAll('.plusMinus').remove();
+    addExamplePlusMinus();
+    addRulePlusMinus();
+}
+
 function main() {
+    // draw the first th
+    d3.select("#grid thead").insert("th");
     drawGrid();
     updateGrid();
 }
