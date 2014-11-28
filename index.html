@@ -9,6 +9,14 @@ table, th, td {
    border: 1px solid black;
 }
 
+.target_result {
+    background-color: #F00;
+}
+
+.source_result {
+    font-size: 24px;
+}
+
 </style>
 
 <script>
@@ -22,7 +30,7 @@ function initAllData() {
     blank = {
         rules: [],
         examples: [],
-        exceptions: [],
+        exceptions: {},
     }
 
     for (var rule_i=0; rule_i < rule_count; rule_i++) {
@@ -55,6 +63,7 @@ function updateAllData() {
     blank = {
         rules: [],
         examples: [],
+        exceptions: allData.exceptions,
     }
 
     for (var rule_i=0; rule_i < rule_count; rule_i++) {
@@ -130,6 +139,25 @@ function applyRuleToExample(rule, example) {
 }
 
 
+function createMatrixDataForType(data, exceptions) {
+
+    if (allData.exceptions.hasOwnProperty(hashRuleExample(data))) {
+        is_exception = true;
+        text = allData.exceptions[hashRuleExample(data)];;
+    } else {
+        is_exception = false;
+        text = applyRuleToExample(data.rule, data.example);
+    }
+
+    return {
+        text: text,
+        is_exception: is_exception,
+        data: data,
+    }
+}
+
+
+
 function pairOffData(allData) {
 
     result = [];
@@ -137,15 +165,25 @@ function pairOffData(allData) {
         var newList = [];
         for (var rule_i=0; rule_i < rule_count; rule_i++) {
 
+            // meh, we could do this earlier, but it's just lookup
+            var current_rule = allData.rules[rule_i];
+            var current_example = allData.examples[example_i];
+
+            var source_data = {
+                type: 'source',
+                rule: current_rule.source,
+                example: current_example.source,
+            }
+
+            var target_data = {
+                type: 'target',
+                rule: current_rule.target,
+                example: current_example.target,
+            }
+
             newList.push({
-                source: applyRuleToExample(
-                    allData.rules[rule_i].source,
-                    allData.examples[example_i].source
-                ),
-                target: applyRuleToExample(
-                    allData.rules[rule_i].target,
-                    allData.examples[example_i].target
-                ),
+                source: createMatrixDataForType(source_data),
+                target: createMatrixDataForType(target_data),
             });
         }
         result.push(newList);
@@ -153,7 +191,6 @@ function pairOffData(allData) {
 
     return result;
 }
-
 
 
 
@@ -174,21 +211,32 @@ function updateGrid() {
     // add td div
     td.selectAll("*").remove();
 
-    source_result = td.append('div');
+
+    source_result = td.append('div')
+        .attr('class', 'source_result');
     source_result.append('span')
-        .text(function (d) {return d.source;});
-    source_result.on("click", function (d) { enterException(this, d.source); });
+        .text(function (d) {return d.source.text || "\u00A0";});
+    source_result.on("click", function (d) {
+        enterException(this, d.source, d.source.text);
+    });
 
-
-    target_result = td.append('div');
+    target_result = td.append('div')
+        .attr('class', 'target_result');
     target_result.append('span')
-        .text(function (d) {return d.target;});
-    target_result.on("click", function (d) { enterException(this, d.target); });
+        .text(function (d) {return d.target.text || "\u00A0";});
+    target_result.on("click", function (d) {
+        enterException(this, d.target, d.target.text);
+    });
 
     td.exit().remove();
 }
 
-function enterException(box, text) {
+function hashRuleExample(rule) {
+    return JSON.stringify(rule);
+}
+
+
+function enterException(box, full_data, text) {
 
     result_box = d3.select(box);
     result_box.on('click', function () {});
@@ -197,18 +245,16 @@ function enterException(box, text) {
 
     input_box = result_box.append('span')
     input_box.append('input').attr("value", text);
-    input_box.append('span').text(":D").on('click', function () {});
+    input_box.append('span').text(":D").on('click', 
+        function () {
+            allData.exceptions[hashRuleExample(full_data.data)] = $(this).siblings('input').val();
+            updateGrid();
+        });
     input_box.append('span').text("X").on('click', function () {});
-
-
-}
-
-
-function addException(input, data) {
-    allData.exceptions[data] = input;
 }
 
 function attachRuleInput(cells) {
+
     cells.append("div")
         .append("input")
         .attr("value", function (d) {return d.source;})
@@ -220,6 +266,7 @@ function attachRuleInput(cells) {
         .attr("value", function (d) {return d.target;})
         .attr("class", "target_rule")
         .on("keyup", updateGrid);
+
 }
 
 
