@@ -22,6 +22,7 @@ function initAllData() {
     blank = {
         rules: [],
         examples: [],
+        exceptions: [],
     }
 
     for (var rule_i=0; rule_i < rule_count; rule_i++) {
@@ -156,9 +157,6 @@ function pairOffData(allData) {
 
 
 
-
-
-
 function updateGrid() {
     allData = updateAllData();
 
@@ -175,10 +173,39 @@ function updateGrid() {
 
     // add td div
     td.selectAll("*").remove();
-    td.append('div').text(function (d) {return d.source;});
-    td.append('div').text(function (d) {return d.target;}); 
+
+    source_result = td.append('div');
+    source_result.append('span')
+        .text(function (d) {return d.source;});
+    source_result.on("click", function (d) { enterException(this, d.source); });
+
+
+    target_result = td.append('div');
+    target_result.append('span')
+        .text(function (d) {return d.target;});
+    target_result.on("click", function (d) { enterException(this, d.target); });
 
     td.exit().remove();
+}
+
+function enterException(box, text) {
+
+    result_box = d3.select(box);
+    result_box.on('click', function () {});
+
+    result_box.selectAll("*").remove();
+
+    input_box = result_box.append('span')
+    input_box.append('input').attr("value", text);
+    input_box.append('span').text(":D").on('click', function () {});
+    input_box.append('span').text("X").on('click', function () {});
+
+
+}
+
+
+function addException(input, data) {
+    allData.exceptions[data] = input;
 }
 
 function attachRuleInput(cells) {
