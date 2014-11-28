@@ -4,9 +4,75 @@
 <script src="d3.v3.min.js" charset="utf-8"></script>
 <script src="jquery.min.js"></script>
 
+<style>
+table, th, td {
+   border: 1px solid black;
+}
+
+</style>
+
 <script>
-var current_width_of_grid = 4;
-var current_height_of_grid = 8;
+var rule_count = 3;
+var example_count = 6;
+
+var allData = initAllData();
+
+
+function initAllData() {
+    blank = {
+        rules: [],
+        examples: [],
+    }
+
+    for (var rule_i=0; rule_i < rule_count; rule_i++) {
+        blank.rules.push({
+            target: "[term]",
+            source: "[term]",
+        })
+    }
+
+    for (var example_i=0; example_i < example_count; example_i++) {
+        blank.examples.push({
+            target: "",
+            source: "",
+        })
+    }
+
+    return blank;
+}
+
+
+function updateAllData() {
+    var getValFromData = function(d) {return $(d).val();};
+
+    source_rules = d3.selectAll(".source_rule")[0].map(getValFromData);
+    target_rules = d3.selectAll(".target_rule")[0].map(getValFromData);
+
+    source_examples = d3.selectAll(".source_example")[0].map(getValFromData);
+    target_examples = d3.selectAll(".target_example")[0].map(getValFromData);
+
+    blank = {
+        rules: [],
+        examples: [],
+    }
+
+    for (var rule_i=0; rule_i < rule_count; rule_i++) {
+        blank.rules.push({
+            source: source_rules[rule_i],
+            target: target_rules[rule_i],
+        })
+    }
+
+    for (var example_i=0; example_i < example_count; example_i++) {
+        blank.examples.push({
+            source: source_examples[example_i],
+            target: target_examples[example_i],
+        })
+    }
+
+    return blank;
+}
+
 
 function applyRuleToExample(rule, example) {
 
@@ -14,9 +80,9 @@ function applyRuleToExample(rule, example) {
         return "";
     }
 
-    var result, final_result;
+    var result;
 
-    result = rule.replace("[term]", example)
+    result = rule.replace("[term]", example);
 
     var match = /\((.+?)->(.+?)\)/g.exec(result);
 
@@ -39,20 +105,21 @@ function applyRuleToExample(rule, example) {
 }
 
 
-function pairOffData(rules, translated_rules, examples, translated_examples) {
+function pairOffData(allData) {
 
     result = [];
-    for (var example_i=0; example_i < examples.length; example_i++) {
+    for (var example_i=0; example_i < example_count; example_i++) {
         var newList = [];
-        for (var rule_i=0; rule_i < rules.length; rule_i++) {
+        for (var rule_i=0; rule_i < rule_count; rule_i++) {
+
             newList.push({
-                "result": applyRuleToExample(
-                    rules[rule_i],
-                    examples[example_i]
+                source: applyRuleToExample(
+                    allData.rules[rule_i].source,
+                    allData.examples[example_i].source
                 ),
-                "translated_result": applyRuleToExample(
-                    translated_rules[rule_i],
-                    translated_examples[example_i]
+                target: applyRuleToExample(
+                    allData.rules[rule_i].target,
+                    allData.examples[example_i].target
                 ),
             });
         }
@@ -83,43 +150,13 @@ function verticalPlusMinus(cell) {
     cell.append('span')
         .text('+')
       .on("click", function () {
-        console.log(current_height_of_grid);
-        current_height_of_grid += 1;
+        example_count += 1;
         main();
       });
 }
 
-function updateCellWithResult(cell) {
-    cell.selectAll("*").remove();
-    cell.append('div').text(function (d) {return d.result;});
-    cell.append('div').text(function (d) {return d.translated_result;}); 
-}
 
-
-function updateGrid() {
-
-    var matrix = pairOffData(
-        d3.selectAll(".rule")[0].map(function(d) {return $(d).val()}),
-        d3.selectAll(".translated_rule")[0].map(function(d) {return $(d).val()}),
-        d3.selectAll(".example")[0].map(function(d) {return $(d).val()}),
-        d3.selectAll(".translated_example")[0].map(function(d) {return $(d).val()})
-    );
-
-    var tr = d3.selectAll('tbody tr')
-        .data(matrix);
-
-    tr.enter().append('tr');
-
-    var td = tr.selectAll("td")
-        .filter(function(d, i) {return i != 0;})
-        .data(function (d) {return d;});
-
-    td.enter().append('td');
-
-    // update old values
-
-    updateCellWithResult(td);
-
+function addPlusMinuses() {
     tr.append('td'); // put one more td at the end
 
     var last_tr = d3.select('tbody')
@@ -130,76 +167,104 @@ function updateGrid() {
     verticalPlusMinus(first_td);
 
     last_tr.selectAll('td')
-        .data(d3.range(1 + current_width_of_grid))
+        .data(d3.range(rule_count))
       .enter()
         .append('td');
 
     last_tr.append('td');
 }
 
+
+function updateGrid() {
+    allData = updateAllData();
+
+    var matrix = pairOffData(allData);
+
+    var tr = d3.selectAll('tbody tr')
+        .data(matrix);
+
+    tr.enter().append('tr');
+
+    var td = tr.selectAll("td.result")
+        .data(function (d) {return d;})
+
+    td.enter().append('td')
+        .attr('class', 'result');
+
+    // add td div
+    td.selectAll("*").remove();
+    td.append('div').text(function (d) {return d.source;});
+    td.append('div').text(function (d) {return d.target;}); 
+
+    td.exit().remove();
+}
+
 function attachInput(cells) {
     cells.append("div")
         .append("input")
-        .attr("value", "[term]")
-        .attr("class", "rule")
+        .attr("value", function (d) {return d.source;})
+        .attr("class", "source_rule")
         .on("keyup", updateGrid);
 
     cells.append("div")
         .append("input")
-        .attr("value", "[term]")
-        .attr("class", "translated_rule")
+        .attr("value", function (d) {return d.target;})
+        .attr("class", "target_rule")
         .on("keyup", updateGrid);
 }
 
 
-function drawGrid() {
-    var header = d3.select("#grid thead.row1")
-
+function makeHeader(header) {
     var th = header.selectAll("th")
-        .data(d3.range(1 + current_width_of_grid))
+        .data(allData.rules)
       .enter()
         .append("th");
+
+    header.insert("th", ":first-child");
+
+    attachInput(th);
 
     last_th = header.append('th');
 
     addHoizontalPlusMinus(last_th);
+}
 
-    var input_things = th.filter(
-        function(d, i) {
-            return i != 0 && i != current_width_of_grid + 1;
-        });
 
-    attachInput(input_things);
+function addExampleInputs(tds) {
 
-    var rows = d3.select("#grid tbody").selectAll("tr")
-        .data(d3.range(1 + current_height_of_grid))
+    tds.append("div")
+        .append("input")
+        .attr("class", "source_example")
+        .on("keyup", updateGrid);
+
+    tds.append("div")
+        .append("input")
+        .attr("class", "target_example")
+        .on("keyup", updateGrid);
+}
+
+function makeRows(tbody) {
+    var rows = tbody.selectAll("tr")
+        .data(allData.examples)
       .enter()
         .append("tr");
 
     var tds = rows.append("td");
 
-    tds.append("div").append("input")
-        .attr("class", "example")
-        .on("keyup", updateGrid);
+    addExampleInputs(tds);
 
-    tds.append("div").append("input")
-        .attr("class", "translated_example")
-        .on("keyup", updateGrid);
+}
 
-    rows.selectAll("td")
-        .data(d3.range(1 + current_width_of_grid))
-        .enter()
-        .append("td")
-        .attr("class", "result");
+
+function drawGrid() {
+    makeHeader(d3.select("#grid thead"));
+    makeRows(d3.select("#grid tbody"));
 }
 
 
 function main() {
-
     drawGrid();
-
     updateGrid();
-
 }
 
 
@@ -221,8 +286,7 @@ $(document).ready(function () {
 
 <div id="grid">
 <table>
-<thead class="row1"></thead>
-<thead class="row2"></thead>
+<thead></thead>
 <tbody></tbody>
 </table>
 </div>
