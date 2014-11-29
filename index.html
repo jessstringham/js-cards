@@ -180,7 +180,7 @@ function applyRuleToExample(rule, example) {
 }
 
 
-function createMatrixDataForType(type, data) {
+function createMatrixDataForType(type, data, cardScore) {
 
     if (allData.exceptions.hasOwnProperty(hashRuleExample(data))) {
         is_exception = true;
@@ -195,6 +195,7 @@ function createMatrixDataForType(type, data) {
         text: text,
         is_exception: is_exception,
         data: data,
+        score: cardScore,
     }
 }
 
@@ -217,15 +218,19 @@ function pairOffData(allData) {
                 example: current_example.source,
             }
 
+            var source_score = allData.cardScores[hashRuleExample(source_data)];
+
             var target_data = {
                 type: 'target',
                 rule: current_rule.target,
                 example: current_example.target,
             }
 
+            var target_score = allData.cardScores[hashRuleExample(target_data)];
+
             newList.push({
-                source: createMatrixDataForType('source', source_data),
-                target: createMatrixDataForType('target', target_data),
+                source: createMatrixDataForType('source', source_data, source_score),
+                target: createMatrixDataForType('target', target_data, target_score),
             });
         }
         result.push(newList);
@@ -419,8 +424,42 @@ var transitionFunctions = {
     'getInput': getInputToTest,
 }
 
+function checkIfCellIsEmpty(cell) {
+    return (!(cell.source.text === "" && cell.target.text === ""));
+}
+
+// todo, rewrite 
+function clearMatrix(matrix) {
+    return matrix.filter(function (d) {
+        return (d[0].source.data.example !== "");
+    });
+}
+
 function drawNextButton() {
-    console.log('all done!');
+    d3.select('div#grid').selectAll('*').remove();
+
+    matrix = pairOffData(allData);
+
+    matrix = clearMatrix(matrix);
+
+    var tbody = d3.select('div#grid')
+        .append('table')
+        .append('tbody');
+
+    tbody.selectAll('tr')
+        .data(matrix)
+      .enter()
+        .append('tr')
+        .selectAll('td')
+        .data(function (d) {return d;})
+      .enter()
+        .append('td')
+        .selectAll('div')
+        .data(function (d) {return [d.source, d.target]})
+      .enter()
+        .append('div')
+        .text(function (d) {return d.text;})
+
 }
 
 function studyTime(cards) {
@@ -447,7 +486,7 @@ function studyTime(cards) {
 
     function flipCard(card) {
         d3.select('div#feels').selectAll('*').remove();
-        d3.select('div#feels').selectAll('*').remove();
+        d3.select('div#card').selectAll('*').remove();
 
 
         d3.select('div#card')
@@ -513,9 +552,7 @@ function getInputToTest() {
         return a.concat(b);
     })
 
-    cards = cards.filter(function (d) {
-        return (!(d.source.text === "" && d.target.text === ""));
-    });
+    cards = cards.filter(checkIfCellIsEmpty);
 
 
     var cards = d3.shuffle(cards);
