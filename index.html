@@ -21,6 +21,14 @@ table, th, td {
     font-size: 36px;
 }
 
+.study_source {
+    font-size: 36px;
+}
+
+.small_study_target {
+    font-size: 14px;
+}
+
 </style>
 
 <script>
@@ -96,6 +104,7 @@ function updateAllData() {
         rules: [],
         examples: [],
         exceptions: allData.exceptions,
+        cardScores: allData.cardScores,
     }
 
     for (var rule_i=0; rule_i < rule_count; rule_i++) {
@@ -408,24 +417,88 @@ var currentState = 'getInput';
 
 var transitionFunctions = {
     'getInput': getInputToTest,
-    'test': confirmToSomething,
 }
 
-function confirmToSomething() {
-    return;
-}
-
-function drawCard(card) {
-    d3.select('div#grid')
-        .append('div')
-        .attr('class', 'study_target')
-        .text(card.target.text);
+function drawNextButton() {
+    console.log('all done!');
 }
 
 function studyTime(cards) {
-    var i = 0;
+    var card_i = 0;
 
-    drawCard(cards[i]);
+    function scoreCard(card, score) {
+        card_data = card.source.data;
+
+        if (!allData.cardScores.hasOwnProperty(hashRuleExample(card_data))) {
+            allData.cardScores[hashRuleExample(card_data)] = [];
+        }
+
+        allData.cardScores[hashRuleExample(card_data)].push(score);
+
+        card_i++;
+
+        if (card_i < cards.length) {
+            drawCard(cards[card_i]);
+        } else {
+            drawNextButton();
+        }
+        
+    }
+
+    function flipCard(card) {
+        d3.select('div#feels').selectAll('*').remove();
+        d3.select('div#feels').selectAll('*').remove();
+
+
+        d3.select('div#card')
+            .attr('class', 'study_source')
+            .text(card.source.text);
+
+        d3.select('div#card')
+            .append('div')
+            .attr('class', 'small_study_target')
+            .text(card.target.text);
+
+        d3.select('div#feels')
+            .append('button')
+            .text(':(')
+            .on('click', function () {
+                scoreCard(card, -1)
+            });
+
+        d3.select('div#feels')
+            .append('button')
+            .text(':D')
+            .on('click', function () {
+                scoreCard(card, 1)
+            });
+    }
+
+    function drawCard(card) {
+        d3.select('div#feels').selectAll('*').remove();
+
+        d3.select('div#card')
+            .attr('class', 'study_target')
+            .text(card.target.text);
+
+        d3.select('div#feels')
+            .append('button')
+            .attr('class', 'flip_it')
+            .text('flip it')
+            .on('click', function () {
+                flipCard(card);
+            });
+    }
+
+    d3.select('div#grid')
+        .append('div')
+        .attr('id', 'feels');
+
+    d3.select('div#grid')
+        .append('div')
+        .attr('id', 'card');
+
+    drawCard(cards[card_i]);
 }
 
 function getInputToTest() {
@@ -440,7 +513,7 @@ function getInputToTest() {
         return a.concat(b);
     })
 
-    cards.filter(function (d) {
+    cards = cards.filter(function (d) {
         return (!(d.source.text === "" && d.target.text === ""));
     });
 
