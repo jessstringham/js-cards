@@ -1,8 +1,8 @@
 <html>
 <head>
 <title>jessicas' Forms Form</title>
-<script src="d3.v3.min.js" charset="utf-8"></script>
-<script src="jquery.min.js"></script>
+<script src='d3.v3.min.js' charset='utf-8'></script>
+<script src='jquery.min.js'></script>
 
 <style>
 table, th, td {
@@ -10,7 +10,7 @@ table, th, td {
 }
 
 .target_result {
-    background-color: #F00;
+    background-color: #AAF;
 }
 
 .source_result {
@@ -35,15 +35,15 @@ function initAllData() {
 
     for (var rule_i=0; rule_i < rule_count; rule_i++) {
         blank.rules.push({
-            target: "[term]",
-            source: "[term]",
+            target: '[term]',
+            source: '[term]',
         })
     }
 
     for (var example_i=0; example_i < example_count; example_i++) {
         blank.examples.push({
-            target: "",
-            source: "",
+            target: '',
+            source: '',
         })
     }
 
@@ -54,11 +54,11 @@ function initAllData() {
 function updateAllData() {
     var getValFromData = function(d) {return $(d).val();};
 
-    source_rules = d3.selectAll(".source_rule")[0].map(getValFromData);
-    target_rules = d3.selectAll(".target_rule")[0].map(getValFromData);
+    source_rules = d3.selectAll('.source_rule')[0].map(getValFromData);
+    target_rules = d3.selectAll('.target_rule')[0].map(getValFromData);
 
-    source_examples = d3.selectAll(".source_example")[0].map(getValFromData);
-    target_examples = d3.selectAll(".target_example")[0].map(getValFromData);
+    source_examples = d3.selectAll('.source_example')[0].map(getValFromData);
+    target_examples = d3.selectAll('.target_example')[0].map(getValFromData);
 
     blank = {
         rules: [],
@@ -87,8 +87,8 @@ function addRule() {
     rule_count += 1;
 
     allData.rules.push({
-        target: "[term]",
-        source: "[term]",
+        target: '[term]',
+        source: '[term]',
     })
 
     drawGrid();
@@ -99,8 +99,8 @@ function addExample() {
     example_count += 1;
 
     allData.examples.push({
-        target: "",
-        source: "",
+        target: '',
+        source: '',
     })
 
     drawGrid();
@@ -110,18 +110,18 @@ function addExample() {
 
 function applyRuleToExample(rule, example) {
 
-    if (example == "") {
-        return "";
+    if (example == '') {
+        return '';
     }
 
     var result;
 
-    result = rule.replace("[term]", example);
+    result = rule.replace('[term]', example);
 
     var match = /\((.+?)->(.+?)\)/g.exec(result);
 
     if (match) {
-        result = result.replace(/\(.+?->.+?\)/, "")
+        result = result.replace(/\(.+?->.+?\)/, '');
 
         // get the string right before it
         replace_this_string_len = match[1].length;
@@ -139,7 +139,7 @@ function applyRuleToExample(rule, example) {
 }
 
 
-function createMatrixDataForType(data, exceptions) {
+function createMatrixDataForType(type, data) {
 
     if (allData.exceptions.hasOwnProperty(hashRuleExample(data))) {
         is_exception = true;
@@ -150,6 +150,7 @@ function createMatrixDataForType(data, exceptions) {
     }
 
     return {
+        type: type,
         text: text,
         is_exception: is_exception,
         data: data,
@@ -182,8 +183,8 @@ function pairOffData(allData) {
             }
 
             newList.push({
-                source: createMatrixDataForType(source_data),
-                target: createMatrixDataForType(target_data),
+                source: createMatrixDataForType('source', source_data),
+                target: createMatrixDataForType('target', target_data),
             });
         }
         result.push(newList);
@@ -193,8 +194,18 @@ function pairOffData(allData) {
 }
 
 
+function updateExceptions() {
+    d3.selectAll('tbody tr.example')
+        .selectAll('td.result').selectAll('div').selectAll('input')
+        .each(function (d, i) {
+            allData.exceptions[hashRuleExample(d.data)] = $(this).val();
+        });
+}
+
 
 function updateGrid() {
+    updateExceptions();
+
     allData = updateAllData();
 
     var matrix = pairOffData(allData);
@@ -202,31 +213,24 @@ function updateGrid() {
     var tr = d3.selectAll('tbody tr.example')
         .data(matrix);
 
-    var td = tr.selectAll("td.result")
+    var td = tr.selectAll('td.result')
         .data(function (d) {return d;})
 
     td.enter().append('td')
         .attr('class', 'result');
 
     // add td div
-    td.selectAll("*").remove();
+    td.selectAll('*').remove();
 
-
-    source_result = td.append('div')
-        .attr('class', 'source_result');
-    source_result.append('span')
-        .text(function (d) {return d.source.text || "\u00A0";});
-    source_result.on("click", function (d) {
-        enterException(this, d.source, d.source.text);
-    });
-
-    target_result = td.append('div')
-        .attr('class', 'target_result');
-    target_result.append('span')
-        .text(function (d) {return d.target.text || "\u00A0";});
-    target_result.on("click", function (d) {
-        enterException(this, d.target, d.target.text);
-    });
+    td.selectAll('div')
+        .data(function (d) {return [d.source, d.target];})
+      .enter()
+        .append('div')
+        .attr('class', function (d) {
+            return d.type + (d.is_exception ? '_result' : '_result exception');
+        })
+        .text(function (d) {return d.text || '\u00A0';})
+        .on('click', function (d) {enterException(this, d);});
 
     td.exit().remove();
 }
@@ -236,46 +240,40 @@ function hashRuleExample(rule) {
 }
 
 
-function enterException(box, full_data, text) {
-
+function enterException(box, full_data) {
     result_box = d3.select(box);
     result_box.on('click', function () {});
 
-    result_box.selectAll("*").remove();
+    result_box.text('');
 
-    input_box = result_box.append('span')
-    input_box.append('input').attr("value", text);
-    input_box.append('span').text(":D").on('click', 
-        function () {
-            allData.exceptions[hashRuleExample(full_data.data)] = $(this).siblings('input').val();
-            updateGrid();
-        });
-    input_box.append('span').text("X").on('click', function () {});
+    input_box = result_box.append('span');
+    input_box.append('input')
+        .attr('value', full_data.text);
 }
 
 function attachRuleInput(cells) {
 
-    cells.append("div")
-        .append("input")
-        .attr("value", function (d) {return d.source;})
-        .attr("class", "source_rule")
-        .on("keyup", updateGrid);
+    cells.append('div')
+        .append('input')
+        .attr('value', function (d) {return d.source;})
+        .attr('class', 'source_rule')
+        .on('keyup', updateGrid);
 
-    cells.append("div")
-        .append("input")
-        .attr("value", function (d) {return d.target;})
-        .attr("class", "target_rule")
-        .on("keyup", updateGrid);
+    cells.append('div')
+        .append('input')
+        .attr('value', function (d) {return d.target;})
+        .attr('class', 'target_rule')
+        .on('keyup', updateGrid);
 
 }
 
 
 function makeHeader(header) {
-    var th = header.selectAll("th.rule")
+    var th = header.selectAll('th.rule')
         .data(allData.rules)
       .enter()
-        .append("th")
-        .attr("class", "rule");
+        .append('th')
+        .attr('class', 'rule');
 
     attachRuleInput(th);
 }
@@ -283,25 +281,25 @@ function makeHeader(header) {
 
 function addExampleInputs(tds) {
 
-    tds.append("div")
-        .append("input")
-        .attr("class", "source_example")
-        .on("keyup", updateGrid);
+    tds.append('div')
+        .append('input')
+        .attr('class', 'source_example')
+        .on('keyup', updateGrid);
 
-    tds.append("div")
-        .append("input")
-        .attr("class", "target_example")
-        .on("keyup", updateGrid);
+    tds.append('div')
+        .append('input')
+        .attr('class', 'target_example')
+        .on('keyup', updateGrid);
 }
 
 function makeRows(tbody) {
-    var rows = tbody.selectAll("tr.example")
+    var rows = tbody.selectAll('tr.example')
         .data(allData.examples)
       .enter()
-        .append("tr")
-        .attr("class", "example");
+        .append('tr')
+        .attr('class', 'example');
 
-    var tds = rows.append("td");
+    var tds = rows.append('td');
 
     addExampleInputs(tds);
 
@@ -309,8 +307,8 @@ function makeRows(tbody) {
 
 
 function drawGrid() {
-    makeHeader(d3.select("#grid thead"));
-    makeRows(d3.select("#grid tbody"));
+    makeHeader(d3.select('#grid thead'));
+    makeRows(d3.select('#grid tbody'));
     appendPlusMinusGrid();
 }
 
@@ -324,30 +322,30 @@ function addExamplePlusMinus() {
     var cell = tr.append('td');
         
 
-    cell.selectAll("*").remove();
+    cell.selectAll('*').remove();
 
     cell.append('span')
         .text('-');
 
     cell.append('span')
         .text('+')
-      .on("click", addExample);
+      .on('click', addExample);
 }
 
 
 function addRulePlusMinus() {
-    cell = d3.select("#grid thead")
+    cell = d3.select('#grid thead')
         .append('th')
         .attr('class', 'plusMinus');
 
-    cell.selectAll("*").remove();
+    cell.selectAll('*').remove();
 
     cell.append('div')
         .text('-');
 
     cell.append('div')
         .text('+')
-      .on("click", addRule);
+      .on('click', addRule);
 }
 
 
@@ -359,7 +357,7 @@ function appendPlusMinusGrid() {
 
 function main() {
     // draw the first th
-    d3.select("#grid thead").insert("th");
+    d3.select('#grid thead').insert('th');
     drawGrid();
     updateGrid();
 }
@@ -381,7 +379,7 @@ $(document).ready(function () {
 <h2>Step 1: Give me some info</h2>
 <p>Enter some words and rules!</p>
 
-<div id="grid">
+<div id='grid'>
 <table>
 <thead></thead>
 <tbody></tbody>
