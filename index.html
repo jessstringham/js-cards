@@ -23,31 +23,53 @@ table, th, td {
 var rule_count = 3;
 var example_count = 6;
 
-var allData = initAllData();
+var allData;
+
+function getDataFromURI() {
+    var match = /\?data=(.*)(?:\&.*)?/g.exec(window.location.search);
+
+    if (!match) {
+        return false;
+    }
+
+    try {
+        return JSON.parse(decodeURIComponent(match[1]));
+    } catch (e) {
+        return false;
+    }
+}
 
 
 function initAllData() {
-    blank = {
+
+    dataInfo = getDataFromURI();
+
+    if (dataInfo) {
+        console.log(dataInfo)
+        return dataInfo;
+    }
+
+    dataInfo = {
         rules: [],
         examples: [],
         exceptions: {},
     }
 
     for (var rule_i=0; rule_i < rule_count; rule_i++) {
-        blank.rules.push({
+        dataInfo.rules.push({
             target: '[term]',
             source: '[term]',
         })
     }
 
     for (var example_i=0; example_i < example_count; example_i++) {
-        blank.examples.push({
+        dataInfo.examples.push({
             target: '',
             source: '',
         })
     }
 
-    return blank;
+    return dataInfo;
 }
 
 
@@ -233,6 +255,14 @@ function updateGrid() {
         .on('click', function (d) {enterException(this, d);});
 
     td.exit().remove();
+
+    updateURL(allData);
+
+}
+
+function updateURL(newData) {
+    var updatedURL = window.location.protocol + "//" + window.location.host + window.location.pathname + '?data=' + encodeURIComponent(JSON.stringify(newData));
+    window.history.pushState({path:updatedURL}, '', updatedURL);
 }
 
 function hashRuleExample(rule) {
@@ -283,11 +313,13 @@ function addExampleInputs(tds) {
 
     tds.append('div')
         .append('input')
+        .attr('value', function (d) {return d.source;})
         .attr('class', 'source_example')
         .on('keyup', updateGrid);
 
     tds.append('div')
         .append('input')
+        .attr('value', function (d) {return d.target;})
         .attr('class', 'target_example')
         .on('keyup', updateGrid);
 }
@@ -364,6 +396,7 @@ function main() {
 
 
 $(document).ready(function () {
+    allData = initAllData();
     main();
 })
 
