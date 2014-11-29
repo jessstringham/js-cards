@@ -29,6 +29,7 @@ table, th, td {
     font-size: 14px;
 }
 
+
 </style>
 
 <script>
@@ -90,7 +91,7 @@ function initAllData() {
     return dataInfo;
 }
 
-
+//todo side effects or not, choose one
 function updateAllData() {
     var getValFromData = function(d) {return $(d).val();};
 
@@ -180,7 +181,7 @@ function applyRuleToExample(rule, example) {
 }
 
 
-function createMatrixDataForType(type, data, cardScore) {
+function createMatrixDataForType(type, data) {
 
     if (allData.exceptions.hasOwnProperty(hashRuleExample(data))) {
         is_exception = true;
@@ -191,11 +192,10 @@ function createMatrixDataForType(type, data, cardScore) {
     }
 
     return {
-        type: type,
+        type: type,  // todo, data has and needs this, can we drop this one?
         text: text,
         is_exception: is_exception,
         data: data,
-        score: cardScore,
     }
 }
 
@@ -218,19 +218,18 @@ function pairOffData(allData) {
                 example: current_example.source,
             }
 
-            var source_score = allData.cardScores[hashRuleExample(source_data)];
-
             var target_data = {
                 type: 'target',
                 rule: current_rule.target,
                 example: current_example.target,
             }
 
-            var target_score = allData.cardScores[hashRuleExample(target_data)];
+            var score = allData.cardScores[hashRuleExample(source_data)];
 
             newList.push({
-                source: createMatrixDataForType('source', source_data, source_score),
-                target: createMatrixDataForType('target', target_data, target_score),
+                source: createMatrixDataForType('source', source_data),
+                target: createMatrixDataForType('target', target_data),
+                score: score,
             });
         }
         result.push(newList);
@@ -280,11 +279,11 @@ function updateGrid() {
 
     td.exit().remove();
 
-    updateURL(allData);
+    commitData(allData);
 
 }
 
-function updateURL(newData) {
+function commitData(newData) {
     var updatedURL = window.location.protocol + "//" + window.location.host + window.location.pathname + '?data=' + encodeURIComponent(JSON.stringify(newData));
     window.history.pushState({path:updatedURL}, '', updatedURL);
 }
@@ -454,12 +453,22 @@ function drawNextButton() {
         .data(function (d) {return d;})
       .enter()
         .append('td')
+        .attr('class', 'final_score')
+        .attr('bgcolor', function (d) {
+            return d3.hsl('#33F')
+                .brighter(computeScore(d.score))
+                .toString();
+            })
         .selectAll('div')
         .data(function (d) {return [d.source, d.target]})
       .enter()
         .append('div')
-        .text(function (d) {return d.text;})
+        .text(function (d) {return d.text;});
 
+}
+
+function computeScore(cardScores) {
+    return d3.sum(cardScores)/cardScores.length;
 }
 
 function studyTime(cards) {
@@ -473,6 +482,7 @@ function studyTime(cards) {
         }
 
         allData.cardScores[hashRuleExample(card_data)].push(score);
+        commitData(allData);
 
         card_i++;
 
@@ -502,7 +512,7 @@ function studyTime(cards) {
             .append('button')
             .text(':(')
             .on('click', function () {
-                scoreCard(card, -1)
+                scoreCard(card, 0)
             });
 
         d3.select('div#feels')
@@ -553,10 +563,7 @@ function getInputToTest() {
     })
 
     cards = cards.filter(checkIfCellIsEmpty);
-
-
-    var cards = d3.shuffle(cards);
-
+    cards = d3.shuffle(cards);
     studyTime(cards);
 
     return 'test';
