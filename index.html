@@ -17,11 +17,15 @@ table, th, td {
     font-size: 24px;
 }
 
+.study_target {
+    font-size: 36px;
+}
+
 </style>
 
 <script>
-var rule_count = 3;
-var example_count = 6;
+var rule_count;
+var example_count;
 
 var allData;
 
@@ -33,7 +37,10 @@ function getDataFromURI() {
     }
 
     try {
-        return JSON.parse(decodeURIComponent(match[1]));
+        allData = JSON.parse(decodeURIComponent(match[1]));
+        rule_count = allData.rules.length;
+        example_count = allData.examples.length;
+        return allData;
     } catch (e) {
         return false;
     }
@@ -45,14 +52,17 @@ function initAllData() {
     dataInfo = getDataFromURI();
 
     if (dataInfo) {
-        console.log(dataInfo)
         return dataInfo;
     }
 
-    dataInfo = {
+    rule_count = 3;
+    example_count = 6;
+
+    var dataInfo = {
         rules: [],
         examples: [],
         exceptions: {},
+        cardScores: {},
     }
 
     for (var rule_i=0; rule_i < rule_count; rule_i++) {
@@ -394,10 +404,71 @@ function main() {
     updateGrid();
 }
 
+var currentState = 'getInput';
+
+var transitionFunctions = {
+    'getInput': getInputToTest,
+    'test': confirmToSomething,
+}
+
+function confirmToSomething() {
+    return;
+}
+
+function drawCard(card) {
+    d3.select('div#grid')
+        .append('div')
+        .attr('class', 'study_target')
+        .text(card.target.text);
+}
+
+function studyTime(cards) {
+    var i = 0;
+
+    drawCard(cards[i]);
+}
+
+function getInputToTest() {
+    allData = updateAllData();
+
+    d3.select('div#grid').selectAll('*').remove();
+    updateExceptions();
+
+    var matrix = pairOffData(allData);
+
+    var cards = matrix.reduce(function (a, b) {
+        return a.concat(b);
+    })
+
+    cards.filter(function (d) {
+        return (!(d.source.text === "" && d.target.text === ""));
+    });
+
+
+    var cards = d3.shuffle(cards);
+
+    studyTime(cards);
+
+    return 'test';
+}
+
+
+function changeState() {
+    currentState = transitionFunctions[currentState]();
+}
+
+
+function setupButton() {
+    d3.select('button#next')
+        .text('Wheee, let\'s go!')
+        .on('click', changeState);
+}
+
 
 $(document).ready(function () {
     allData = initAllData();
     main();
+    setupButton();
 })
 
 
@@ -406,11 +477,11 @@ $(document).ready(function () {
 
 </head>
 <body>
-<h1>Welcome to the form forms of formulation!</h1>
-<p>Oh dear, that name has got to go</p>
+<h1>Study time!</h1>
 
-<h2>Step 1: Give me some info</h2>
-<p>Enter some words and rules!</p>
+<div>
+<p><button id='next'></button></p>
+</div>
 
 <div id='grid'>
 <table>
@@ -418,6 +489,7 @@ $(document).ready(function () {
 <tbody></tbody>
 </table>
 </div>
+
 
 
 </body>
