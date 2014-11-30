@@ -12,6 +12,8 @@ var cards = (function () {
 
   var currentState = 'getInput';
 
+  var currentGridIndex = 0;
+
 
   function hashRuleExample(rule) {
     return JSON.stringify(rule);
@@ -38,11 +40,11 @@ var cards = (function () {
       example_i;
 
     blank = {
-      name: allData.name,
+      name: allData[currentGridIndex].name,
       rules: [],
       examples: [],
-      exceptions: allData.exceptions,
-      cardScores: allData.cardScores
+      exceptions: allData[currentGridIndex].exceptions,
+      cardScores: allData[currentGridIndex].cardScores
     };
 
     for (rule_i = 0; rule_i < source_rules.length; rule_i++) {
@@ -59,7 +61,8 @@ var cards = (function () {
       });
     }
 
-    return blank;
+    allData[currentGridIndex] = blank;
+    return allData;
   }
 
   function applyRuleToExample(rule, example) {
@@ -110,7 +113,7 @@ var cards = (function () {
     d3.selectAll('tbody tr.example')
       .selectAll('td.result').selectAll('div').selectAll('input')
       .each(function (d) {
-        allData.exceptions[hashRuleExample(d.data)] = $(this).val();
+        allData[currentGridIndex].exceptions[hashRuleExample(d.data)] = $(this).val();
       });
   }
 
@@ -119,9 +122,9 @@ var cards = (function () {
     function createMatrixDataForType(type, data) {
       var isException, text;
 
-      if (allData.exceptions.hasOwnProperty(hashRuleExample(data))) {
+      if (allData[currentGridIndex].exceptions.hasOwnProperty(hashRuleExample(data))) {
         isException = true;
-        text = allData.exceptions[hashRuleExample(data)];
+        text = allData[currentGridIndex].exceptions[hashRuleExample(data)];
       } else {
         isException = false;
         text = applyRuleToExample(data.rule, data.example);
@@ -144,13 +147,13 @@ var cards = (function () {
       source_data,
       target_data;
 
-    for (example_i = 0; example_i < allData.examples.length; example_i++) {
+    for (example_i = 0; example_i < allData[currentGridIndex].examples.length; example_i++) {
       newList = [];
-      for (rule_i = 0; rule_i < allData.rules.length; rule_i++) {
+      for (rule_i = 0; rule_i < allData[currentGridIndex].rules.length; rule_i++) {
 
         // meh, we could do this earlier, but it's just lookup
-        current_rule = allData.rules[rule_i];
-        current_example = allData.examples[example_i];
+        current_rule = allData[currentGridIndex].rules[rule_i];
+        current_example = allData[currentGridIndex].examples[example_i];
 
         source_data = {
           type: 'source',
@@ -167,7 +170,7 @@ var cards = (function () {
         newList.push({
           source: createMatrixDataForType('source', source_data),
           target: createMatrixDataForType('target', target_data),
-          score: allData.cardScores[hashRuleExample(source_data)]
+          score: allData[currentGridIndex].cardScores[hashRuleExample(source_data)]
         });
       }
       result.push(newList);
@@ -229,17 +232,8 @@ var cards = (function () {
     }
   }
 
-  function initAllData() {
-    var URIdataInfo = getDataFromURI(),
-      dataInfo,
-      rule_i,
-      example_i;
-
-    if (URIdataInfo) {
-      return URIdataInfo;
-    }
-
-    dataInfo = {
+  function blankData() {
+    var dataInfo = {
       name: "",
       rules: [],
       examples: [],
@@ -264,7 +258,22 @@ var cards = (function () {
     return dataInfo;
   }
 
+  function initAllData() {
+    var URIdataInfo = getDataFromURI(),
+      dataInfo,
+      rule_i,
+      example_i;
+
+    if (URIdataInfo) {
+      return URIdataInfo;
+    }
+
+    return [blankData()];
+  }
+
   function attachRuleInput(cells) {
+
+    cells.selectAll('*').remove();
 
     cells.append('div')
       .append('input')
@@ -343,11 +352,11 @@ var cards = (function () {
     function scoreCard(card, score) {
       var cardData = card.source.data;
 
-      if (!allData.cardScores.hasOwnProperty(hashRuleExample(cardData))) {
-        allData.cardScores[hashRuleExample(cardData)] = [];
+      if (!allData[currentGridIndex].cardScores.hasOwnProperty(hashRuleExample(cardData))) {
+        allData[currentGridIndex].cardScores[hashRuleExample(cardData)] = [];
       }
 
-      allData.cardScores[hashRuleExample(cardData)].push(score);
+      allData[currentGridIndex].cardScores[hashRuleExample(cardData)].push(score);
       commitData(allData);
 
       card_i++;
@@ -418,10 +427,13 @@ var cards = (function () {
   function drawGrid() {
     function makeHeader(header) {
       var th = header.selectAll('th.rule')
-        .data(allData.rules)
-        .enter()
+        .data(allData[currentGridIndex].rules);
+
+      th.enter()
         .append('th')
         .attr('class', 'rule');
+
+      th.exit().remove();
 
       attachRuleInput(th);
     }
@@ -430,7 +442,7 @@ var cards = (function () {
       var rows, tds;
 
       rows = tbody.selectAll('tr.example')
-        .data(allData.examples)
+        .data(allData[currentGridIndex].examples)
         .enter()
         .append('tr')
         .attr('class', 'example');
@@ -454,7 +466,7 @@ var cards = (function () {
       cell.append('span')
         .text('+')
         .on('click', function () {
-          allData.examples.push({
+          allData[currentGridIndex].examples.push({
             target: '',
             source: ''
           });
@@ -477,7 +489,8 @@ var cards = (function () {
       cell.append('div')
         .text('+')
         .on('click', function () {
-          allData.rules.push({
+          allData[currentGridIndex]
+          .rules.push({
             target: '[term]',
             source: '[term]'
           });
@@ -492,6 +505,10 @@ var cards = (function () {
       addExamplePlusMinus();
       addRulePlusMinus();
     }
+
+
+    $('#gridName')
+      .val(allData[currentGridIndex].name);
 
     makeHeader(d3.select('#grid thead'));
     makeRows(d3.select('#grid tbody'));
@@ -539,21 +556,55 @@ var cards = (function () {
   }
 
   function createNewGrid() {
-    
+    allData.push(blankData());
+    currentGridIndex = allData.length - 1; // move to this new
+    updateArrows();
+    drawGrid();
+    updateGrid();
   }
 
   function drawGridSelector() {
     d3.select('#gridName')
-      .attr('value', allData.name)
       .on('keyup', function () {
-        allData.name = $(this).val();
+        allData[currentGridIndex].name = $(this).val();
         commitData(allData);
       });
 
     d3.select('#makeNewGrid')
       .on('click', function () {
         createNewGrid();
-      })
+        commitData(allData);
+      });
+
+    d3.select('#choosePrevGrid')
+      .on('click', function () {
+        currentGridIndex--;
+        updateArrows();
+        drawGrid();
+        updateGrid();
+      });
+
+    d3.select('#chooseNextGrid')
+      .on('click', function () {
+        currentGridIndex++;
+        updateArrows();
+        drawGrid();
+        updateGrid();
+      });
+
+    updateArrows();
+  }
+
+  function updateArrows() {
+    $('#choosePrevGrid').removeAttr('disabled');
+    $('#chooseNextGrid').removeAttr('disabled');
+
+    if (currentGridIndex === 0) {
+      $('#choosePrevGrid').attr('disabled','disabled');
+    }
+    if (currentGridIndex === allData.length - 1) {
+      $('#chooseNextGrid').attr('disabled','disabled');
+    }
   }
 
   cards.main = function () {
