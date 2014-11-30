@@ -101,7 +101,7 @@ var cards = (function () {
     var resultBox, inputBox;
 
     resultBox = d3.select(box);
-    resultBox.on('click', drawNextButton); // remove click event
+    resultBox.on('click', drawFinalResultsGrid); // remove click event
     resultBox.text('');
 
     inputBox = resultBox.append('span');
@@ -117,14 +117,19 @@ var cards = (function () {
       });
   }
 
-  function pairOffData(allData) {
+  function pairOffData(gridData, index) {
+
+    // FIXME: ugh
+    if (index === undefined) {
+      index = currentGridIndex;
+    }
 
     function createMatrixDataForType(type, data) {
       var isException, text;
 
-      if (allData[currentGridIndex].exceptions.hasOwnProperty(hashRuleExample(data))) {
+      if (gridData.exceptions.hasOwnProperty(hashRuleExample(data))) {
         isException = true;
-        text = allData[currentGridIndex].exceptions[hashRuleExample(data)];
+        text = gridData.exceptions[hashRuleExample(data)];
       } else {
         isException = false;
         text = applyRuleToExample(data.rule, data.example);
@@ -147,30 +152,32 @@ var cards = (function () {
       source_data,
       target_data;
 
-    for (example_i = 0; example_i < allData[currentGridIndex].examples.length; example_i++) {
+    for (example_i = 0; example_i < gridData.examples.length; example_i++) {
       newList = [];
-      for (rule_i = 0; rule_i < allData[currentGridIndex].rules.length; rule_i++) {
+      for (rule_i = 0; rule_i < gridData.rules.length; rule_i++) {
 
         // meh, we could do this earlier, but it's just lookup
-        current_rule = allData[currentGridIndex].rules[rule_i];
-        current_example = allData[currentGridIndex].examples[example_i];
+        current_rule = gridData.rules[rule_i];
+        current_example = gridData.examples[example_i];
 
         source_data = {
           type: 'source',
           rule: current_rule.source,
-          example: current_example.source
+          example: current_example.source,
+          gridIndex: index
         };
 
         target_data = {
           type: 'target',
           rule: current_rule.target,
-          example: current_example.target
+          example: current_example.target,
+          gridIndex: index
         };
 
         newList.push({
           source: createMatrixDataForType('source', source_data),
           target: createMatrixDataForType('target', target_data),
-          score: allData[currentGridIndex].cardScores[hashRuleExample(source_data)]
+          score: gridData.cardScores[hashRuleExample(source_data)]
         });
       }
       result.push(newList);
@@ -187,7 +194,7 @@ var cards = (function () {
     updateExceptions();
 
     allData = updateAllData();
-    matrix = pairOffData(allData);
+    matrix = pairOffData(allData[currentGridIndex]);
 
     tr = d3.selectAll('tbody tr.example')
       .data(matrix);
@@ -233,6 +240,9 @@ var cards = (function () {
   }
 
   function blankData() {
+    var rule_i,
+      example_i;
+
     var dataInfo = {
       name: "",
       rules: [],
@@ -281,19 +291,32 @@ var cards = (function () {
     });
   }
 
-  function drawNextButton() {
-    var matrix, tbody;
+  function drawFinalResultsGrid() {
+    var divs, tbody, matrices;
 
     d3.select('div#grid').selectAll('*').remove();
 
-    matrix = clearMatrix(pairOffData(allData));
+    function getCleanMatrixAndName(entry, i) {
+      return {
+        data: clearMatrix(pairOffData(entry, i)),
+        name: entry.name
+      };
+    }
 
-    tbody = d3.select('div#grid')
-      .append('table')
-      .append('tbody');
+    matrices = allData.map(getCleanMatrixAndName);
+
+    divs = d3.select('div#grid')
+      .selectAll('div.scoreResults')
+      .data(matrices)
+      .enter()
+      .append('div')
+      .attr('class', 'scoreResults')
+      .text(function (d) {return d.name});
+
+    tbody = divs.append('table').append('tbody');
 
     tbody.selectAll('tr')
-      .data(matrix)
+      .data(function (d) {return d.data; })
       .enter()
       .append('tr')
       .selectAll('td')
@@ -313,23 +336,28 @@ var cards = (function () {
       .text(function (d) {return d.text; });
   }
 
-  function studyTime(cards) {
+  function studyTime(cardList) {
     var card_i = 0;
+
+    function updateCardScore(cardData, score) {
+      // TODO: this is complicated, rework
+      if (!allData[cardData.gridIndex].cardScores.hasOwnProperty(hashRuleExample(cardData))) {
+        allData[cardData.gridIndex].cardScores[hashRuleExample(cardData)] = [];
+      }
+
+      allData[cardData.gridIndex].cardScores[hashRuleExample(cardData)].push(score);
+    }
 
     function scoreCard(card, score) {
       var cardData = card.source.data;
+      updateCardScore(cardData, score)
 
-      if (!allData[currentGridIndex].cardScores.hasOwnProperty(hashRuleExample(cardData))) {
-        allData[currentGridIndex].cardScores[hashRuleExample(cardData)] = [];
-      }
-
-      allData[currentGridIndex].cardScores[hashRuleExample(cardData)].push(score);
       commitData(allData);
 
       card_i++;
 
-      if (card_i < cards.length) {
-        drawCard(cards[card_i]);
+      if (card_i < cardList.length) {
+        drawCard(cardList[card_i]);
       } else {
         changeState();
       }
@@ -338,7 +366,6 @@ var cards = (function () {
     function flipCard(card) {
       d3.select('div#feels').selectAll('*').remove();
       d3.select('div#card').selectAll('*').remove();
-
 
       d3.select('div#card')
         .attr('class', 'study_source')
@@ -388,7 +415,8 @@ var cards = (function () {
       .append('div')
       .attr('id', 'card');
 
-    drawCard(cards[card_i]);
+
+    drawCard(cardList[card_i]);
   }
 
   function drawGrid() {
@@ -513,8 +541,7 @@ var cards = (function () {
       addRulePlusMinus();
     }
 
-    $('#gridName')
-      .val(allData[currentGridIndex].name);
+    $('#gridName').val(allData[currentGridIndex].name);
 
     makeHeader(d3.select('#grid thead'));
     makeRows(d3.select('#grid tbody'));
@@ -525,23 +552,36 @@ var cards = (function () {
     return (!(cell.source.text === "" && cell.target.text === ""));
   }
 
-  function getInputToTest() {
-    var matrix, cards;
+  function getAllCards() {
+    var matrix, flashCards;
 
-    allData = updateAllData();
+    function getFlattenMatrices(entry, i) {
+      matrix = pairOffData(entry, i);
 
-    d3.select('div#grid').selectAll('*').remove();
-    updateExceptions();
+      flashCards = matrix.reduce(function (a, b) {
+        return a.concat(b);
+      });
 
-    matrix = pairOffData(allData);
-
-    cards = matrix.reduce(function (a, b) {
+      return flashCards.filter(checkIfCellIsEmpty);
+    }
+    // ugh, flatten it one more time
+    return allData.map(getFlattenMatrices).reduce(function (a, b) {
       return a.concat(b);
     });
+    
+  }
 
-    cards = cards.filter(checkIfCellIsEmpty);
-    cards = d3.shuffle(cards);
-    studyTime(cards);
+  function getInputToTest() {
+    var flashCards;
+
+    allData = updateAllData();
+    updateExceptions();  // FIXME, why is this here?
+
+    d3.select('div#grid').selectAll('*').remove();
+
+    flashCards = getAllCards();
+    flashCards = d3.shuffle(flashCards);
+    studyTime(flashCards);
 
     return 'drawScoreGrid';
   }
@@ -549,7 +589,7 @@ var cards = (function () {
   function changeState() {
     var transitionFunctions = {
       'getInput': getInputToTest,
-      'drawScoreGrid': drawNextButton,
+      'drawScoreGrid': drawFinalResultsGrid,
     };
 
     currentState = transitionFunctions[currentState]();
