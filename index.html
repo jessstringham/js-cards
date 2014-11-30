@@ -34,14 +34,6 @@ table, th, td {
 
 <script>
 
-
-
-
-
-// TODO, generalize this so it can have multiple grids
-var rule_count;
-var example_count;
-
 var allData;
 
 function getDataFromURI() {
@@ -52,10 +44,7 @@ function getDataFromURI() {
     }
 
     try {
-        allData = JSON.parse(decodeURIComponent(match[1]));
-        rule_count = allData.rules.length;
-        example_count = allData.examples.length;
-        return allData;
+        return JSON.parse(decodeURIComponent(match[1]));
     } catch (e) {
         return false;
     }
@@ -70,8 +59,8 @@ function initAllData() {
         return dataInfo;
     }
 
-    rule_count = 3;
-    example_count = 6;
+    default_rule_count = 3;
+    default_example_count = 6;
 
     var dataInfo = {
         rules: [],
@@ -80,14 +69,14 @@ function initAllData() {
         cardScores: {},
     }
 
-    for (var rule_i=0; rule_i < rule_count; rule_i++) {
+    for (var rule_i=0; rule_i < default_rule_count; rule_i++) {
         dataInfo.rules.push({
             target: '[term]',
             source: '[term]',
         })
     }
 
-    for (var example_i=0; example_i < example_count; example_i++) {
+    for (var example_i=0; example_i < default_example_count; example_i++) {
         dataInfo.examples.push({
             target: '',
             source: '',
@@ -114,14 +103,14 @@ function updateAllData() {
         cardScores: allData.cardScores,
     }
 
-    for (var rule_i=0; rule_i < rule_count; rule_i++) {
+    for (var rule_i=0; rule_i < source_rules.length; rule_i++) {
         blank.rules.push({
             source: source_rules[rule_i],
             target: target_rules[rule_i],
         })
     }
 
-    for (var example_i=0; example_i < example_count; example_i++) {
+    for (var example_i=0; example_i < source_examples.length; example_i++) {
         blank.examples.push({
             source: source_examples[example_i],
             target: target_examples[example_i],
@@ -132,8 +121,6 @@ function updateAllData() {
 }
 
 function addRule() {
-    rule_count += 1;
-
     allData.rules.push({
         target: '[term]',
         source: '[term]',
@@ -144,8 +131,6 @@ function addRule() {
 }
 
 function addExample() {
-    example_count += 1;
-
     allData.examples.push({
         target: '',
         source: '',
@@ -210,9 +195,9 @@ function createMatrixDataForType(type, data) {
 function pairOffData(allData) {
 
     result = [];
-    for (var example_i=0; example_i < example_count; example_i++) {
+    for (var example_i=0; example_i < allData.examples.length; example_i++) {
         var newList = [];
-        for (var rule_i=0; rule_i < rule_count; rule_i++) {
+        for (var rule_i=0; rule_i < allData.rules.length; rule_i++) {
 
             // meh, we could do this earlier, but it's just lookup
             var current_rule = allData.rules[rule_i];
