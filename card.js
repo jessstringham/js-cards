@@ -271,39 +271,6 @@ var cards = (function () {
     return [blankData()];
   }
 
-  function attachRuleInput(cells) {
-
-    cells.selectAll('*').remove();
-
-    cells.append('div')
-      .append('input')
-      .attr('value', function (d) {return d.source; })
-      .attr('class', 'source_rule')
-      .on('keyup', updateGrid);
-
-    cells.append('div')
-      .append('input')
-      .attr('value', function (d) {return d.target; })
-      .attr('class', 'target_rule')
-      .on('keyup', updateGrid);
-
-  }
-
-  function addExampleInputs(tds) {
-
-    tds.append('div')
-      .append('input')
-      .attr('value', function (d) {return d.source; })
-      .attr('class', 'source_example')
-      .on('keyup', updateGrid);
-
-    tds.append('div')
-      .append('input')
-      .attr('value', function (d) {return d.target; })
-      .attr('class', 'target_example')
-      .on('keyup', updateGrid);
-  }
-
   function computeScore(cardScores) {
     return d3.sum(cardScores) / cardScores.length;
   }
@@ -425,6 +392,41 @@ var cards = (function () {
   }
 
   function drawGrid() {
+
+    function addExampleInputs(tds) {
+      tds.selectAll('*').remove();
+
+      tds.append('div')
+        .append('input')
+        .attr('value', function (d) {return d.source; })
+        .attr('class', 'source_example')
+        .on('keyup', updateGrid);
+
+      tds.append('div')
+        .append('input')
+        .attr('value', function (d) {return d.target; })
+        .attr('class', 'target_example')
+        .on('keyup', updateGrid);
+    }
+
+    function attachRuleInput(cells) {
+
+      cells.selectAll('*').remove();
+
+      cells.append('div')
+        .append('input')
+        .attr('value', function (d) {return d.source; })
+        .attr('class', 'source_rule')
+        .on('keyup', updateGrid);
+
+      cells.append('div')
+        .append('input')
+        .attr('value', function (d) {return d.target; })
+        .attr('class', 'target_rule')
+        .on('keyup', updateGrid);
+
+    }
+
     function makeHeader(header) {
       var th = header.selectAll('th.rule')
         .data(allData[currentGridIndex].rules);
@@ -442,10 +444,15 @@ var cards = (function () {
       var rows, tds;
 
       rows = tbody.selectAll('tr.example')
-        .data(allData[currentGridIndex].examples)
-        .enter()
+        .data(allData[currentGridIndex].examples);
+
+      rows.enter()
         .append('tr')
         .attr('class', 'example');
+
+      rows.exit().remove();
+
+      rows.selectAll("*").remove();
 
       tds = rows.append('td');
 
@@ -506,7 +513,6 @@ var cards = (function () {
       addRulePlusMinus();
     }
 
-
     $('#gridName')
       .val(allData[currentGridIndex].name);
 
@@ -557,6 +563,7 @@ var cards = (function () {
 
   function createNewGrid() {
     allData.push(blankData());
+
     currentGridIndex = allData.length - 1; // move to this new
     updateArrows();
     drawGrid();
