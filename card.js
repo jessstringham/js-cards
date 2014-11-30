@@ -18,7 +18,9 @@ var cards = (function () {
   }
 
   function commitData(newData) {
-    var updatedURL = window.location.protocol + "//" + window.location.host + window.location.pathname + '?data=' + encodeURIComponent(JSON.stringify(newData));
+    var updatedURL = window.location.protocol + "//"
+                     + window.location.host + window.location.pathname
+                     + '?data=' + encodeURIComponent(JSON.stringify(newData));
     window.history.pushState({path: updatedURL}, '', updatedURL);
   }
 
@@ -95,7 +97,7 @@ var cards = (function () {
     var resultBox, inputBox;
 
     resultBox = d3.select(box);
-    resultBox.on('click', null); // remove click event
+    resultBox.on('click', drawNextButton); // remove click event
     resultBox.text('');
 
     inputBox = resultBox.append('span');
@@ -295,47 +297,49 @@ var cards = (function () {
     return d3.sum(cardScores) / cardScores.length;
   }
 
+  function clearMatrix(matrix) {
+    return matrix.filter(function (d) {
+      return (d[0].source.data.example !== "");
+    });
+  }
+
+  function drawNextButton() {
+    var matrix, tbody;
+
+    d3.select('div#grid').selectAll('*').remove();
+
+    matrix = clearMatrix(pairOffData(allData));
+
+    tbody = d3.select('div#grid')
+      .append('table')
+      .append('tbody');
+
+    tbody.selectAll('tr')
+      .data(matrix)
+      .enter()
+      .append('tr')
+      .selectAll('td')
+      .data(function (d) {return d; })
+      .enter()
+      .append('td')
+      .attr('class', 'final_score')
+      .attr('bgcolor', function (d) {
+        return d3.hsl('#33F')
+          .brighter(computeScore(d.score))
+          .toString();
+      })
+      .selectAll('div')
+      .data(function (d) {return [d.source, d.target]; })
+      .enter()
+      .append('div')
+      .text(function (d) {return d.text; });
+  }
+
   function studyTime(cards) {
     var card_i = 0;
 
-    function clearMatrix(matrix) {
-      return matrix.filter(function (d) {
-        return (d[0].source.data.example !== "");
-      });
-    }
 
-    function drawNextButton() {
-      var matrix, tbody;
 
-      d3.select('div#grid').selectAll('*').remove();
-
-      matrix = clearMatrix(pairOffData(allData));
-
-      tbody = d3.select('div#grid')
-        .append('table')
-        .append('tbody');
-
-      tbody.selectAll('tr')
-        .data(matrix)
-        .enter()
-        .append('tr')
-        .selectAll('td')
-        .data(function (d) {return d; })
-        .enter()
-        .append('td')
-        .attr('class', 'final_score')
-        .attr('bgcolor', function (d) {
-          return d3.hsl('#33F')
-            .brighter(computeScore(d.score))
-            .toString();
-        })
-        .selectAll('div')
-        .data(function (d) {return [d.source, d.target]; })
-        .enter()
-        .append('div')
-        .text(function (d) {return d.text; });
-
-    }
 
     function scoreCard(card, score) {
       var cardData = card.source.data;
@@ -352,7 +356,7 @@ var cards = (function () {
       if (card_i < cards.length) {
         drawCard(cards[card_i]);
       } else {
-        drawNextButton();
+        changeState();
       }
     }
 
@@ -517,12 +521,13 @@ var cards = (function () {
     cards = d3.shuffle(cards);
     studyTime(cards);
 
-    return 'test';
+    return 'drawScoreGrid';
   }
 
   function changeState() {
     var transitionFunctions = {
-      'getInput': getInputToTest
+      'getInput': getInputToTest,
+      'drawScoreGrid': drawNextButton,
     };
 
     currentState = transitionFunctions[currentState]();
