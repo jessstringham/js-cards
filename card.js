@@ -38,6 +38,7 @@ var cards = (function () {
       example_i;
 
     blank = {
+      name: allData.name,
       rules: [],
       examples: [],
       exceptions: allData.exceptions,
@@ -239,6 +240,7 @@ var cards = (function () {
     }
 
     dataInfo = {
+      name: "",
       rules: [],
       examples: [],
       exceptions: {},
@@ -337,9 +339,6 @@ var cards = (function () {
 
   function studyTime(cards) {
     var card_i = 0;
-
-
-
 
     function scoreCard(card, score) {
       var cardData = card.source.data;
@@ -539,8 +538,28 @@ var cards = (function () {
       .on('click', changeState);
   }
 
+  function createNewGrid() {
+    
+  }
+
+  function drawGridSelector() {
+    d3.select('#gridName')
+      .attr('value', allData.name)
+      .on('keyup', function () {
+        allData.name = $(this).val();
+        commitData(allData);
+      });
+
+    d3.select('#makeNewGrid')
+      .on('click', function () {
+        createNewGrid();
+      })
+  }
+
   cards.main = function () {
     allData = initAllData();
+
+    drawGridSelector();
     // draw the first th
     d3.select('#grid thead').insert('th');
     drawGrid();
