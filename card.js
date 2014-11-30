@@ -59,8 +59,6 @@ var cards = (function () {
         return blank;
     }
 
-
-
     function applyRuleToExample(rule, example) {
 
         var result,
@@ -92,8 +90,6 @@ var cards = (function () {
 
         return result;
     }
-
-
 
     function enterException(box, full_data) {
         var resultBox, inputBox;
@@ -177,7 +173,6 @@ var cards = (function () {
         return result;
     }
 
-
     function updateGrid() {
         var matrix,
             tr,
@@ -231,7 +226,6 @@ var cards = (function () {
         }
     }
 
-
     function initAllData() {
         var URIdataInfo = getDataFromURI(),
             dataInfo,
@@ -266,11 +260,6 @@ var cards = (function () {
         return dataInfo;
     }
 
-
-
-
-
-
     function attachRuleInput(cells) {
 
         cells.append('div')
@@ -286,8 +275,6 @@ var cards = (function () {
             .on('keyup', updateGrid);
 
     }
-
-
 
     function addExampleInputs(tds) {
 
@@ -414,7 +401,6 @@ var cards = (function () {
                 });
         }
 
-
         d3.select('div#grid')
             .append('div')
             .attr('id', 'feels');
@@ -425,8 +411,6 @@ var cards = (function () {
 
         drawCard(cards[card_i]);
     }
-
-
 
     function drawGrid() {
         function makeHeader(header) {
@@ -511,9 +495,6 @@ var cards = (function () {
         appendPlusMinusGrid();
     }
 
-
-
-
     function checkIfCellIsEmpty(cell) {
         return (!(cell.source.text === "" && cell.target.text === ""));
     }
@@ -546,7 +527,6 @@ var cards = (function () {
 
         currentState = transitionFunctions[currentState]();
     }
-
 
     function setupButton() {
         d3.select('button#next')
