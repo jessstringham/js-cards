@@ -1,31 +1,41 @@
 var cards = (function () {
   var cards = {};
 
-  var allData;
-
   // constants
-  var EXAMPLE_PLACEHOLDER = '[term]',
-    REPLACEMENT_REGEX = /\((\w+?)->(\w+?)\)/g;
-
   var default_rule_count = 3,
-    default_example_count = 6;
+      default_example_count = 6;
 
-  var currentState = 'getInput';
+  // state
+  var currentState = 'getInput',
+      currentGridIndex = 0;
 
-  var currentGridIndex = 0;
 
+  // loading data
+  function commitData() {
+    var newData = cardDataStore.getData();
 
-  function hashRuleExample(rule) {
-    return JSON.stringify(rule);
-  }
-
-  function commitData(newData) {
     var updatedURL = window.location.protocol + "//"
                      + window.location.host + window.location.pathname
                      + '?data=' + encodeURIComponent(JSON.stringify(newData));
     window.history.pushState({path: updatedURL}, '', updatedURL);
   }
 
+  function getDataFromURI() {
+    // FIXME this is probably a terrible regex for this. 
+    var match = /\?data=([\w%"']*)?/g.exec(window.location.search);
+
+    if (!match) {
+      return false;
+    }
+
+    try {
+      return JSON.parse(decodeURIComponent(match[1]));
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // grid interactions
   function updateAllData() {
     function getValFromData(d) {
       return d.value;
@@ -34,67 +44,15 @@ var cards = (function () {
     var source_rules = d3.selectAll('.source_rule')[0].map(getValFromData),
       target_rules = d3.selectAll('.target_rule')[0].map(getValFromData),
       source_examples = d3.selectAll('.source_example')[0].map(getValFromData),
-      target_examples = d3.selectAll('.target_example')[0].map(getValFromData),
-      blank,
-      rule_i,
-      example_i;
+      target_examples = d3.selectAll('.target_example')[0].map(getValFromData);
 
-    blank = {
-      name: allData[currentGridIndex].name,
-      rules: [],
-      examples: [],
-      exceptions: allData[currentGridIndex].exceptions,
-      cardScores: allData[currentGridIndex].cardScores
-    };
-
-    for (rule_i = 0; rule_i < source_rules.length; rule_i++) {
-      blank.rules.push({
-        source: source_rules[rule_i],
-        target: target_rules[rule_i]
-      });
-    }
-
-    for (example_i = 0; example_i < source_examples.length; example_i++) {
-      blank.examples.push({
-        source: source_examples[example_i],
-        target: target_examples[example_i]
-      });
-    }
-
-    allData[currentGridIndex] = blank;
-    return allData;
-  }
-
-  function applyRuleToExample(rule, example) {
-
-    var result,
-      match,
-      replace_this_string_len,
-      could_be_a_match;
-
-    if (example === '') {
-      return '';
-    }
-
-    result = rule.replace(EXAMPLE_PLACEHOLDER, example);
-
-    match = REPLACEMENT_REGEX.exec(result);
-    if (match) {
-      result = result.replace(REPLACEMENT_REGEX, '');
-
-      // get the string right before it
-      replace_this_string_len = match[1].length;
-
-      could_be_a_match = result.substr(match.index - replace_this_string_len, replace_this_string_len);
-
-      if (could_be_a_match === match[1]) {
-        result = result.substr(0, match.index - replace_this_string_len)
-          + match[2]
-          + result.substr(match.index, result.length - 1);
-      }
-    }
-
-    return result;
+      cardDataStore.updateDataFromRulesExamples(
+        currentGridIndex,
+        source_rules, 
+        target_rules,
+        source_examples,
+        target_examples
+      )
   }
 
   function enterException(box, full_data) {
@@ -113,88 +71,17 @@ var cards = (function () {
     d3.selectAll('tbody tr.example')
       .selectAll('td.result').selectAll('div').selectAll('input')
       .each(function (d) {
-        allData[currentGridIndex].exceptions[hashRuleExample(d.data)] = this.value;
+        cardDataStore.updateException(currentGridIndex, d.data, this.value);
       });
   }
 
-  function pairOffData(gridData, index) {
-
-    // FIXME: ugh
-    if (index === undefined) {
-      index = currentGridIndex;
-    }
-
-    function createMatrixDataForType(type, data) {
-      var isException, text;
-
-      if (gridData.exceptions.hasOwnProperty(hashRuleExample(data))) {
-        isException = true;
-        text = gridData.exceptions[hashRuleExample(data)];
-      } else {
-        isException = false;
-        text = applyRuleToExample(data.rule, data.example);
-      }
-
-      return {
-        type: type,  // todo, data has and needs this, can we drop this one?
-        text: text,
-        is_exception: isException,
-        data: data
-      };
-    }
-
-    var result = [],
-      example_i,
-      rule_i,
-      newList,
-      current_rule,
-      current_example,
-      source_data,
-      target_data;
-
-    for (example_i = 0; example_i < gridData.examples.length; example_i++) {
-      newList = [];
-      for (rule_i = 0; rule_i < gridData.rules.length; rule_i++) {
-
-        // meh, we could do this earlier, but it's just lookup
-        current_rule = gridData.rules[rule_i];
-        current_example = gridData.examples[example_i];
-
-        source_data = {
-          type: 'source',
-          rule: current_rule.source,
-          example: current_example.source,
-          gridIndex: index
-        };
-
-        target_data = {
-          type: 'target',
-          rule: current_rule.target,
-          example: current_example.target,
-          gridIndex: index
-        };
-
-        newList.push({
-          source: createMatrixDataForType('source', source_data),
-          target: createMatrixDataForType('target', target_data),
-          score: gridData.cardScores[hashRuleExample(source_data)]
-        });
-      }
-      result.push(newList);
-    }
-
-    return result;
-  }
-
   function updateGrid() {
-    var matrix,
-      tr,
-      td;
+    var matrix, tr, td;
 
     updateExceptions();
 
-    allData = updateAllData();
-    matrix = pairOffData(allData[currentGridIndex]);
+    updateAllData();
+    matrix = cardDataStore.pairOffData(currentGridIndex);
 
     tr = d3.selectAll('tbody tr.example')
       .data(matrix);
@@ -220,139 +107,187 @@ var cards = (function () {
 
     td.exit().remove();
 
-    commitData(allData);
-
+    commitData();
   }
 
-  function getDataFromURI() {
-    // FIXME this is probably a terrible regex for this. 
-    var match = /\?data=([\w%"']*)?/g.exec(window.location.search);
+  function drawGrid() {
 
-    if (!match) {
-      return false;
+    function addExampleInputs(tds) {
+      tds.selectAll('*').remove();
+
+      tds.append('div')
+        .append('input')
+        .attr('value', function (d) {return d.source; })
+        .attr('class', 'source_example')
+        .on('keyup', updateGrid);
+
+      tds.append('div')
+        .append('input')
+        .attr('value', function (d) {return d.target; })
+        .attr('class', 'target_example')
+        .on('keyup', updateGrid);
     }
 
-    try {
-      return JSON.parse(decodeURIComponent(match[1]));
-    } catch (e) {
-      return false;
+    function attachRuleInput(cells) {
+
+      cells.selectAll('*').remove();
+
+      cells.append('div')
+        .append('input')
+        .attr('value', function (d) {return d.source; })
+        .attr('class', 'source_rule')
+        .on('keyup', updateGrid);
+
+      cells.append('div')
+        .append('input')
+        .attr('value', function (d) {return d.target; })
+        .attr('class', 'target_rule')
+        .on('keyup', updateGrid);
     }
+
+    function makeHeader(header) {
+      var th = header.selectAll('th.rule')
+        .data(cardDataStore.getData()[currentGridIndex].rules);
+
+      th.enter()
+        .append('th')
+        .attr('class', 'rule');
+
+      th.exit().remove();
+
+      attachRuleInput(th);
+    }
+
+    function makeRows(tbody) {
+      var rows, tds;
+
+      rows = tbody.selectAll('tr.example')
+        .data(cardDataStore.getData()[currentGridIndex].examples);
+
+      rows.enter()
+        .append('tr')
+        .attr('class', 'example');
+
+      rows.exit().remove();
+
+      rows.selectAll("*").remove();
+
+      tds = rows.append('td');
+
+      addExampleInputs(tds);
+    }
+
+    function addExamplePlusMinus() {
+      var tr, cell;
+
+      tr = d3.select('tbody')
+        .append('tr');
+      tr.attr('class', 'plusMinus');
+
+      cell = tr.append('td');
+      cell.selectAll('*').remove();
+      cell.append('span')
+        .text('-');
+      cell.append('span')
+        .text('+')
+        .on('click', function () {
+          cardDataStore.addBlankExample(currentGridIndex);
+          drawGrid();
+          updateGrid();
+        });
+    }
+
+    function addRulePlusMinus() {
+      var cell = d3.select('#grid thead')
+        .append('th')
+        .attr('class', 'plusMinus');
+
+      cell.selectAll('*').remove();
+
+      cell.append('div')
+        .text('-');
+
+      cell.append('div')
+        .text('+')
+        .on('click', function () {
+          cardDataStore.addBlankRule(currentGridIndex)
+          drawGrid();
+          updateGrid();
+        });
+    }
+
+    function appendPlusMinusGrid() {
+      d3.selectAll('.plusMinus').remove();
+      addExamplePlusMinus();
+      addRulePlusMinus();
+    }
+
+    document.getElementById('gridName').value = cardDataStore.getData()[currentGridIndex].name;
+
+    makeHeader(d3.select('#grid thead'));
+    makeRows(d3.select('#grid tbody'));
+    appendPlusMinusGrid();
   }
 
-  function blankData() {
-    var rule_i,
-      example_i;
+  function createNewGrid() {
+    cardDataStore.addGrid();
 
-    var dataInfo = {
-      name: "",
-      rules: [],
-      examples: [],
-      exceptions: {},
-      cardScores: {}
-    };
+    currentGridIndex = cardDataStore.gridCount() - 1; // move to this new
+    updateArrows();
+    drawGrid();
+    updateGrid();
+  }
 
-    for (rule_i = 0; rule_i < default_rule_count; rule_i++) {
-      dataInfo.rules.push({
-        target: '[term]',
-        source: '[term]'
+  function drawGridSelector() {
+    d3.select('#gridName')
+      .on('keyup', function () {
+        cardDataStore.setGridName(currentGridIndex, this.value);
+        commitData();
       });
-    }
 
-    for (example_i = 0; example_i < default_example_count; example_i++) {
-      dataInfo.examples.push({
-        target: '',
-        source: ''
+    d3.select('#makeNewGrid')
+      .on('click', function () {
+        createNewGrid();
+        commitData();
       });
-    }
 
-    return dataInfo;
+    d3.select('#choosePrevGrid')
+      .on('click', function () {
+        currentGridIndex--;
+        updateArrows();
+        drawGrid();
+        updateGrid();
+      });
+
+    d3.select('#chooseNextGrid')
+      .on('click', function () {
+        currentGridIndex++;
+        updateArrows();
+        drawGrid();
+        updateGrid();
+      });
+
+    updateArrows();
   }
 
-  function initAllData() {
-    var URIdataInfo = getDataFromURI(),
-      dataInfo,
-      rule_i,
-      example_i;
+  function updateArrows() {
+    var is_at_last_grid = (currentGridIndex === cardDataStore.gridCount() - 1),
+      is_at_first_grid = (currentGridIndex === 0);
 
-    if (URIdataInfo) {
-      return URIdataInfo;
-    }
-
-    return [blankData()];
+    document.getElementById('choosePrevGrid').disabled = is_at_first_grid;
+    document.getElementById('chooseNextGrid').disabled = is_at_last_grid;
   }
 
-  function computeScore(cardScores) {
-    return d3.sum(cardScores) / cardScores.length;
-  }
 
-  function clearMatrix(matrix) {
-    return matrix.filter(function (d) {
-      return (d[0].source.data.example !== "");
-    });
-  }
-
-  function drawFinalResultsGrid() {
-    var divs, tbody, matrices;
-
-    d3.select('div#grid').selectAll('*').remove();
-
-    function getCleanMatrixAndName(entry, i) {
-      return {
-        data: clearMatrix(pairOffData(entry, i)),
-        name: entry.name
-      };
-    }
-
-    matrices = allData.map(getCleanMatrixAndName);
-
-    divs = d3.select('div#grid')
-      .selectAll('div.scoreResults')
-      .data(matrices)
-      .enter()
-      .append('div')
-      .attr('class', 'scoreResults')
-      .text(function (d) {return d.name});
-
-    tbody = divs.append('table').append('tbody');
-
-    tbody.selectAll('tr')
-      .data(function (d) {return d.data; })
-      .enter()
-      .append('tr')
-      .selectAll('td')
-      .data(function (d) {return d; })
-      .enter()
-      .append('td')
-      .attr('class', 'final_score')
-      .attr('bgcolor', function (d) {
-        return d3.hsl('#33F')
-          .brighter(computeScore(d.score))
-          .toString();
-      })
-      .selectAll('div')
-      .data(function (d) {return [d.source, d.target]; })
-      .enter()
-      .append('div')
-      .text(function (d) {return d.text; });
-  }
-
+  // study time
   function studyTime(cardList) {
     var card_i = 0;
 
-    function updateCardScore(cardData, score) {
-      // TODO: this is complicated, rework
-      if (!allData[cardData.gridIndex].cardScores.hasOwnProperty(hashRuleExample(cardData))) {
-        allData[cardData.gridIndex].cardScores[hashRuleExample(cardData)] = [];
-      }
-
-      allData[cardData.gridIndex].cardScores[hashRuleExample(cardData)].push(score);
-    }
-
     function scoreCard(card, score) {
-      var cardData = card.source.data;
-      updateCardScore(cardData, score)
+      var card_data = card.source.data;
+      cardDataStore.updateCardScore(card_data, score)
 
-      commitData(allData);
+      commitData();
 
       card_i++;
 
@@ -419,171 +354,71 @@ var cards = (function () {
     drawCard(cardList[card_i]);
   }
 
-  function drawGrid() {
-
-    function addExampleInputs(tds) {
-      tds.selectAll('*').remove();
-
-      tds.append('div')
-        .append('input')
-        .attr('value', function (d) {return d.source; })
-        .attr('class', 'source_example')
-        .on('keyup', updateGrid);
-
-      tds.append('div')
-        .append('input')
-        .attr('value', function (d) {return d.target; })
-        .attr('class', 'target_example')
-        .on('keyup', updateGrid);
-    }
-
-    function attachRuleInput(cells) {
-
-      cells.selectAll('*').remove();
-
-      cells.append('div')
-        .append('input')
-        .attr('value', function (d) {return d.source; })
-        .attr('class', 'source_rule')
-        .on('keyup', updateGrid);
-
-      cells.append('div')
-        .append('input')
-        .attr('value', function (d) {return d.target; })
-        .attr('class', 'target_rule')
-        .on('keyup', updateGrid);
-
-    }
-
-    function makeHeader(header) {
-      var th = header.selectAll('th.rule')
-        .data(allData[currentGridIndex].rules);
-
-      th.enter()
-        .append('th')
-        .attr('class', 'rule');
-
-      th.exit().remove();
-
-      attachRuleInput(th);
-    }
-
-    function makeRows(tbody) {
-      var rows, tds;
-
-      rows = tbody.selectAll('tr.example')
-        .data(allData[currentGridIndex].examples);
-
-      rows.enter()
-        .append('tr')
-        .attr('class', 'example');
-
-      rows.exit().remove();
-
-      rows.selectAll("*").remove();
-
-      tds = rows.append('td');
-
-      addExampleInputs(tds);
-    }
-
-    function addExamplePlusMinus() {
-      var tr, cell;
-
-      tr = d3.select('tbody')
-        .append('tr');
-      tr.attr('class', 'plusMinus');
-
-      cell = tr.append('td');
-      cell.selectAll('*').remove();
-      cell.append('span')
-        .text('-');
-      cell.append('span')
-        .text('+')
-        .on('click', function () {
-          allData[currentGridIndex].examples.push({
-            target: '',
-            source: ''
-          });
-
-          drawGrid();
-          updateGrid();
-        });
-    }
-
-    function addRulePlusMinus() {
-      var cell = d3.select('#grid thead')
-        .append('th')
-        .attr('class', 'plusMinus');
-
-      cell.selectAll('*').remove();
-
-      cell.append('div')
-        .text('-');
-
-      cell.append('div')
-        .text('+')
-        .on('click', function () {
-          allData[currentGridIndex]
-          .rules.push({
-            target: '[term]',
-            source: '[term]'
-          });
-
-          drawGrid();
-          updateGrid();
-        });
-    }
-
-    function appendPlusMinusGrid() {
-      d3.selectAll('.plusMinus').remove();
-      addExamplePlusMinus();
-      addRulePlusMinus();
-    }
-
-    document.getElementById('gridName').value = allData[currentGridIndex].name;
-
-    makeHeader(d3.select('#grid thead'));
-    makeRows(d3.select('#grid tbody'));
-    appendPlusMinusGrid();
-  }
-
-  function checkIfCellIsEmpty(cell) {
-    return (!(cell.source.text === "" && cell.target.text === ""));
-  }
-
-  function getAllCards() {
-    var matrix, flashCards;
-
-    function getFlattenMatrices(entry, i) {
-      matrix = pairOffData(entry, i);
-
-      flashCards = matrix.reduce(function (a, b) {
-        return a.concat(b);
-      });
-
-      return flashCards.filter(checkIfCellIsEmpty);
-    }
-    // ugh, flatten it one more time
-    return allData.map(getFlattenMatrices).reduce(function (a, b) {
-      return a.concat(b);
-    });
-    
-  }
-
   function getInputToTest() {
     var flashCards;
 
-    allData = updateAllData();
+    updateAllData();
     updateExceptions();  // FIXME, why is this here?
 
     d3.select('div#grid').selectAll('*').remove();
 
-    flashCards = getAllCards();
+    flashCards = cardDataStore.getAllCards();
     flashCards = d3.shuffle(flashCards);
     studyTime(flashCards);
 
     return 'drawScoreGrid';
+  }
+
+
+  // final results
+  function drawFinalResultsGrid() {
+    var divs, tbody, matrices;
+
+    function computeScore(cardScores) {
+      return d3.sum(cardScores) / cardScores.length;
+    }
+
+    d3.select('div#grid').selectAll('*').remove();
+
+    matrices = cardDataStore.getCleanMatrix();
+
+    divs = d3.select('div#grid')
+      .selectAll('div.scoreResults')
+      .data(matrices)
+      .enter()
+      .append('div')
+      .attr('class', 'scoreResults')
+      .text(function (d) {return d.name});
+
+    tbody = divs.append('table').append('tbody');
+
+    tbody.selectAll('tr')
+      .data(function (d) {return d.data; })
+      .enter()
+      .append('tr')
+      .selectAll('td')
+      .data(function (d) {return d; })
+      .enter()
+      .append('td')
+      .attr('class', 'final_score')
+      .attr('bgcolor', function (d) {
+        return d3.hsl('#33F')
+          .brighter(computeScore(d.score))
+          .toString();
+      })
+      .selectAll('div')
+      .data(function (d) {return [d.source, d.target]; })
+      .enter()
+      .append('div')
+      .text(function (d) {return d.text; });
+  }
+
+
+  // handle state
+  function setupButton() {
+    d3.select('button#next')
+      .text('Wheee, let\'s go!')
+      .on('click', changeState);
   }
 
   function changeState() {
@@ -595,64 +430,12 @@ var cards = (function () {
     currentState = transitionFunctions[currentState]();
   }
 
-  function setupButton() {
-    d3.select('button#next')
-      .text('Wheee, let\'s go!')
-      .on('click', changeState);
-  }
-
-  function createNewGrid() {
-    allData.push(blankData());
-
-    currentGridIndex = allData.length - 1; // move to this new
-    updateArrows();
-    drawGrid();
-    updateGrid();
-  }
-
-  function drawGridSelector() {
-    d3.select('#gridName')
-      .on('keyup', function () {
-        allData[currentGridIndex].name = this.value;
-        commitData(allData);
-      });
-
-    d3.select('#makeNewGrid')
-      .on('click', function () {
-        createNewGrid();
-        commitData(allData);
-      });
-
-    d3.select('#choosePrevGrid')
-      .on('click', function () {
-        currentGridIndex--;
-        updateArrows();
-        drawGrid();
-        updateGrid();
-      });
-
-    d3.select('#chooseNextGrid')
-      .on('click', function () {
-        currentGridIndex++;
-        updateArrows();
-        drawGrid();
-        updateGrid();
-      });
-
-    updateArrows();
-  }
-
-  function updateArrows() {
-    var is_at_last_grid = (currentGridIndex === allData.length - 1),
-        is_at_first_grid = (currentGridIndex === 0);
-
-    document.getElementById('choosePrevGrid').disabled = is_at_first_grid;
-    document.getElementById('chooseNextGrid').disabled = is_at_last_grid;
-
-  }
-
   cards.main = function () {
-    allData = initAllData();
+    cardDataStore = card_data(
+      default_rule_count, 
+      default_example_count, 
+      getDataFromURI()
+    );
 
     drawGridSelector();
     // draw the first th
