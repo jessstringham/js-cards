@@ -28,7 +28,7 @@ var cards = (function () {
 
   function updateAllData() {
     function getValFromData(d) {
-      return $(d).val();
+      return d.value;
     }
 
     var source_rules = d3.selectAll('.source_rule')[0].map(getValFromData),
@@ -113,7 +113,7 @@ var cards = (function () {
     d3.selectAll('tbody tr.example')
       .selectAll('td.result').selectAll('div').selectAll('input')
       .each(function (d) {
-        allData[currentGridIndex].exceptions[hashRuleExample(d.data)] = $(this).val();
+        allData[currentGridIndex].exceptions[hashRuleExample(d.data)] = this.value;
       });
   }
 
@@ -541,7 +541,7 @@ var cards = (function () {
       addRulePlusMinus();
     }
 
-    $('#gridName').val(allData[currentGridIndex].name);
+    document.getElementById('gridName').value = allData[currentGridIndex].name;
 
     makeHeader(d3.select('#grid thead'));
     makeRows(d3.select('#grid tbody'));
@@ -613,7 +613,7 @@ var cards = (function () {
   function drawGridSelector() {
     d3.select('#gridName')
       .on('keyup', function () {
-        allData[currentGridIndex].name = $(this).val();
+        allData[currentGridIndex].name = this.value;
         commitData(allData);
       });
 
@@ -643,15 +643,12 @@ var cards = (function () {
   }
 
   function updateArrows() {
-    $('#choosePrevGrid').removeAttr('disabled');
-    $('#chooseNextGrid').removeAttr('disabled');
+    var is_at_last_grid = (currentGridIndex === allData.length - 1),
+        is_at_first_grid = (currentGridIndex === 0);
 
-    if (currentGridIndex === 0) {
-      $('#choosePrevGrid').attr('disabled','disabled');
-    }
-    if (currentGridIndex === allData.length - 1) {
-      $('#chooseNextGrid').attr('disabled','disabled');
-    }
+    document.getElementById('choosePrevGrid').disabled = is_at_first_grid;
+    document.getElementById('chooseNextGrid').disabled = is_at_last_grid;
+
   }
 
   cards.main = function () {
