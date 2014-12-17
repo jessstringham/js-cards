@@ -12,7 +12,7 @@ var cards = (function () {
 
   // loading data
   function commitData() {
-    var newData = cardDataStore.getData();
+    var newData = cardDataStore.data.data;
 
     var updatedURL = window.location.protocol + "//"
                      + window.location.host + window.location.pathname
@@ -46,7 +46,7 @@ var cards = (function () {
       source_examples = d3.selectAll('.source_example')[0].map(getValFromData),
       target_examples = d3.selectAll('.target_example')[0].map(getValFromData);
 
-      cardDataStore.updateDataFromRulesExamples(
+      cardDataStore.data.updateDataFromRulesExamples(
         currentGridIndex,
         source_rules, 
         target_rules,
@@ -147,7 +147,7 @@ var cards = (function () {
 
     function makeHeader(header) {
       var th = header.selectAll('th.rule')
-        .data(cardDataStore.getData()[currentGridIndex].rules);
+        .data(cardDataStore.data.getData(currentGridIndex).rules);
 
       th.enter()
         .append('th')
@@ -162,7 +162,7 @@ var cards = (function () {
       var rows, tds;
 
       rows = tbody.selectAll('tr.example')
-        .data(cardDataStore.getData()[currentGridIndex].examples);
+        .data(cardDataStore.data.getData(currentGridIndex).examples);
 
       rows.enter()
         .append('tr')
@@ -191,7 +191,7 @@ var cards = (function () {
       cell.append('span')
         .text('+')
         .on('click', function () {
-          cardDataStore.addBlankExample(currentGridIndex);
+          cardDataStore.data.addBlankExample(currentGridIndex);
           drawGrid();
           updateGrid();
         });
@@ -210,7 +210,7 @@ var cards = (function () {
       cell.append('div')
         .text('+')
         .on('click', function () {
-          cardDataStore.addBlankRule(currentGridIndex)
+          cardDataStore.data.addBlankRule(currentGridIndex)
           drawGrid();
           updateGrid();
         });
@@ -222,7 +222,7 @@ var cards = (function () {
       addRulePlusMinus();
     }
 
-    document.getElementById('gridName').value = cardDataStore.getData()[currentGridIndex].name;
+    document.getElementById('gridName').value = cardDataStore.data.getGridName(currentGridIndex);
 
     makeHeader(d3.select('#grid thead'));
     makeRows(d3.select('#grid tbody'));
@@ -230,9 +230,9 @@ var cards = (function () {
   }
 
   function createNewGrid() {
-    cardDataStore.addGrid();
+    cardDataStore.data.addGrid();
 
-    currentGridIndex = cardDataStore.gridCount() - 1; // move to this new
+    currentGridIndex = cardDataStore.data.gridCount() - 1; // move to this new
     updateArrows();
     drawGrid();
     updateGrid();
@@ -241,7 +241,7 @@ var cards = (function () {
   function drawGridSelector() {
     d3.select('#gridName')
       .on('keyup', function () {
-        cardDataStore.setGridName(currentGridIndex, this.value);
+        cardDataStore.data.setGridName(currentGridIndex, this.value);
         commitData();
       });
 
@@ -271,7 +271,7 @@ var cards = (function () {
   }
 
   function updateArrows() {
-    var is_at_last_grid = (currentGridIndex === cardDataStore.gridCount() - 1),
+    var is_at_last_grid = (currentGridIndex === cardDataStore.data.gridCount() - 1),
       is_at_first_grid = (currentGridIndex === 0);
 
     document.getElementById('choosePrevGrid').disabled = is_at_first_grid;
@@ -285,7 +285,7 @@ var cards = (function () {
 
     function scoreCard(card, score) {
       var card_data = card.source.data;
-      cardDataStore.updateCardScore(card_data, score)
+      cardDataStore.data.updateCardScore(card_data, score)
 
       commitData();
 
@@ -431,7 +431,7 @@ var cards = (function () {
   }
 
   cards.main = function () {
-    cardDataStore = card_data(
+    cardDataStore = CardLogic(
       default_rule_count, 
       default_example_count, 
       getDataFromURI()
