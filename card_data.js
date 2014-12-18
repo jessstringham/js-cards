@@ -118,35 +118,21 @@ var CardData = function (default_rule_count, default_example_count, data_from_ur
     return dataInfo;
   }
 
-  function updateDataFromRulesExamples(gridIndex, source_rules, target_rules, source_examples, target_examples) {
-    var blank,
-      rule_i,
-      example_i;
+  function sourceTargetObjListFromList(source_list, target_list) {
+    return d3.zip(source_list, target_list).map(function (d) {
+      return {
+        source: d[0],
+        target: d[1]
+      }
+    });
+  }
 
-    blank = {
-      name: card_data[gridIndex].name,
-      rules: [],
-      examples: [],
-      exceptions: card_data[gridIndex].exceptions,
-      cardScores: card_data[gridIndex].cardScores
-    };
+  function updateRules(gridIndex, source_rules, target_rules) {
+    card_data[gridIndex].rules = sourceTargetObjListFromList(source_rules, target_rules);
+  }
 
-    for (rule_i = 0; rule_i < source_rules.length; rule_i++) {
-      blank.rules.push({
-        source: source_rules[rule_i],
-        target: target_rules[rule_i]
-      });
-    }
-
-    for (example_i = 0; example_i < source_examples.length; example_i++) {
-      blank.examples.push({
-        source: source_examples[example_i],
-        target: target_examples[example_i]
-      });
-    }
-
-    card_data[gridIndex] = blank;
-    return card_data;
+  function updateExamples(gridIndex, source_examples, target_examples) {
+    card_data[gridIndex].examples = sourceTargetObjListFromList(source_examples, target_examples);
   }
 
   function initAllData(URIdataInfo) {
@@ -166,7 +152,8 @@ var CardData = function (default_rule_count, default_example_count, data_from_ur
 
   return {
     data: card_data,
-    updateDataFromRulesExamples: updateDataFromRulesExamples,
+    updateRules: updateRules,
+    updateExamples: updateExamples,
     getData: getData,
     addBlankExample: addBlankExample,
     addBlankRule: addBlankRule,

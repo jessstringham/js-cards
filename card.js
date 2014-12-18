@@ -37,22 +37,21 @@ var cards = (function () {
 
   // grid interactions
   function updateAllData() {
-    function getValFromData(d) {
-      return d.value;
+    function getValsForClass(classSelector) {
+      return d3.selectAll(classSelector)[0].map(function (d) {return d.value;})
     }
 
-    var source_rules = d3.selectAll('.source_rule')[0].map(getValFromData),
-      target_rules = d3.selectAll('.target_rule')[0].map(getValFromData),
-      source_examples = d3.selectAll('.source_example')[0].map(getValFromData),
-      target_examples = d3.selectAll('.target_example')[0].map(getValFromData);
+    cardDataStore.data.updateRules(
+      currentGridIndex, 
+      getValsForClass('.source_rule'), 
+      getValsForClass('.target_rule')
+    );
 
-      cardDataStore.data.updateDataFromRulesExamples(
-        currentGridIndex,
-        source_rules, 
-        target_rules,
-        source_examples,
-        target_examples
-      )
+    cardDataStore.data.updateExamples(
+      currentGridIndex, 
+      getValsForClass('.source_example'), 
+      getValsForClass('.target_example')
+    );
   }
 
   function enterException(box, full_data) {
