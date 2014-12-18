@@ -125,6 +125,8 @@ var cards = (function () {
         .attr('value', function (d) {return d.target; })
         .attr('class', 'target_example')
         .on('keyup', updateGrid);
+
+      updateGrid();
     }
 
     function attachRuleInput(cells) {
@@ -192,7 +194,6 @@ var cards = (function () {
         .on('click', function () {
           cardDataStore.data.addBlankExample(currentGridIndex);
           drawGrid();
-          updateGrid();
         });
     }
 
@@ -211,7 +212,6 @@ var cards = (function () {
         .on('click', function () {
           cardDataStore.data.addBlankRule(currentGridIndex)
           drawGrid();
-          updateGrid();
         });
     }
 
@@ -234,7 +234,6 @@ var cards = (function () {
     currentGridIndex = cardDataStore.data.gridCount() - 1; // move to this new
     updateArrows();
     drawGrid();
-    updateGrid();
   }
 
   function drawGridSelector() {
@@ -255,7 +254,6 @@ var cards = (function () {
         currentGridIndex--;
         updateArrows();
         drawGrid();
-        updateGrid();
       });
 
     d3.select('#chooseNextGrid')
@@ -263,7 +261,6 @@ var cards = (function () {
         currentGridIndex++;
         updateArrows();
         drawGrid();
-        updateGrid();
       });
 
     updateArrows();
@@ -440,7 +437,6 @@ var cards = (function () {
     // draw the first th
     d3.select('#grid thead').insert('th');
     drawGrid();
-    updateGrid();
     setupButton();
   }
 
