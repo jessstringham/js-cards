@@ -188,8 +188,11 @@ var cards = (function () {
       cell = tr.append('td');
       cell.selectAll('*').remove();
       cell.append('span')
+        .append('button')
         .text('-');
+
       cell.append('span')
+        .append('button')
         .text('+')
         .on('click', function () {
           cardDataStore.data.addBlankExample(currentGridIndex);
@@ -205,9 +208,11 @@ var cards = (function () {
       cell.selectAll('*').remove();
 
       cell.append('div')
+        .append('button')
         .text('-');
 
       cell.append('div')
+        .append('button')
         .text('+')
         .on('click', function () {
           cardDataStore.data.addBlankRule(currentGridIndex)
