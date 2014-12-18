@@ -38,19 +38,21 @@ var cards = (function () {
   // grid interactions
   function updateAllData() {
     function getValsForClass(classSelector) {
-      return d3.selectAll(classSelector)[0].map(function (d) {return d.value;})
+      return [].map.call(
+        document.getElementsByClassName(classSelector),
+        function (d) {return d.value;})
     }
 
     cardDataStore.data.updateRules(
-      currentGridIndex, 
-      getValsForClass('.source_rule'), 
-      getValsForClass('.target_rule')
+      currentGridIndex,
+      getValsForClass('source_rule'),
+      getValsForClass('target_rule')
     );
 
     cardDataStore.data.updateExamples(
-      currentGridIndex, 
-      getValsForClass('.source_example'), 
-      getValsForClass('.target_example')
+      currentGridIndex,
+      getValsForClass('source_example'),
+      getValsForClass('target_example')
     );
   }
 
