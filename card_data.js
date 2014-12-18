@@ -27,6 +27,16 @@ var CardData = function (default_rule_count, default_example_count, data_from_ur
     return JSON.stringify(rule);
   }
 
+  function sourceTargetObjListFromList(source_list, target_list) {
+    return d3.zip(source_list, target_list).map(function (d) {
+      return {
+        source: d[0],
+        target: d[1]
+      }
+    });
+  }
+
+  // examples
   function addBlankExampleToCardGrid(cardGrid) {
     cardGrid.examples.push({
       target: '',
@@ -34,6 +44,15 @@ var CardData = function (default_rule_count, default_example_count, data_from_ur
     });
   }
 
+  function addBlankExample(index) {
+    addBlankExampleToCardGrid(card_data[index]);
+  }
+
+  function updateExamples(gridIndex, source_examples, target_examples) {
+    card_data[gridIndex].examples = sourceTargetObjListFromList(source_examples, target_examples);
+  }
+
+  //rules
   function addBlankRuleToCardGrid(cardGrid) {
     cardGrid.rules.push({
       target: '[term]',
@@ -41,20 +60,16 @@ var CardData = function (default_rule_count, default_example_count, data_from_ur
     });
   }
 
-  function addBlankExample(index) {
-    card_data[index].examples.push({
-      target: '',
-      source: ''
-    });
-  }
-
   function addBlankRule(index) {
-    card_data[index].rules.push({
-      target: '[term]',
-      source: '[term]'
-    });
+    addBlankRuleToCardGrid(card_data[index]);
   }
 
+  function updateRules(gridIndex, source_rules, target_rules) {
+    card_data[gridIndex].rules = sourceTargetObjListFromList(source_rules, target_rules);
+  }
+
+
+  // grids
   function addGrid() {
     card_data.push(blankData());
   }
@@ -67,6 +82,11 @@ var CardData = function (default_rule_count, default_example_count, data_from_ur
     return card_data[index].name;
   }
 
+  function gridCount() {
+    return card_data.length;
+  }
+
+  // scores
   function getCardScore(index, source_data) {
     return card_data[index].cardScores[hashRuleExample(source_data)]
   }
@@ -80,10 +100,7 @@ var CardData = function (default_rule_count, default_example_count, data_from_ur
     card_data[cardData.gridIndex].cardScores[hashRuleExample(cardData)].push(score);
   }
 
-  function gridCount() {
-    return card_data.length;
-  }
-
+  // exceptions
   function updateException(gridIndex, data, new_exception) {
     card_data[gridIndex].exceptions[hashRuleExample(data)] = new_exception;
   }
@@ -95,6 +112,7 @@ var CardData = function (default_rule_count, default_example_count, data_from_ur
   function hasException(gridIndex, data) {
     return card_data[gridIndex].exceptions.hasOwnProperty(hashRuleExample(data))
   }
+
 
   function blankData() {
     var rule_i,
@@ -118,21 +136,8 @@ var CardData = function (default_rule_count, default_example_count, data_from_ur
     return dataInfo;
   }
 
-  function sourceTargetObjListFromList(source_list, target_list) {
-    return d3.zip(source_list, target_list).map(function (d) {
-      return {
-        source: d[0],
-        target: d[1]
-      }
-    });
-  }
-
-  function updateRules(gridIndex, source_rules, target_rules) {
-    card_data[gridIndex].rules = sourceTargetObjListFromList(source_rules, target_rules);
-  }
-
-  function updateExamples(gridIndex, source_examples, target_examples) {
-    card_data[gridIndex].examples = sourceTargetObjListFromList(source_examples, target_examples);
+  function getData(index) {
+    return card_data[index];
   }
 
   function initAllData(URIdataInfo) {
@@ -144,26 +149,22 @@ var CardData = function (default_rule_count, default_example_count, data_from_ur
     return [blankData()];
   }
 
-  function getData(index) {
-    return card_data[index];
-  } 
-
   card_data = initAllData(data_from_uri);
 
   return {
     data: card_data,
-    updateRules: updateRules,
-    updateExamples: updateExamples,
     getData: getData,
-    addBlankExample: addBlankExample,
+    updateRules: updateRules,
     addBlankRule: addBlankRule,
+    updateExamples: updateExamples,
+    addBlankExample: addBlankExample,
+    hasException: hasException,
+    updateException: updateException,
     gridCount: gridCount,
     setGridName: setGridName,
     addGrid: addGrid,
-    updateCardScore: updateCardScore,
     getGridName: getGridName,
-    hasException: hasException,
-    updateException: updateException,
+    updateCardScore: updateCardScore,
     getCardScore: getCardScore,
   }
 };
