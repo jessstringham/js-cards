@@ -1,47 +1,48 @@
 var CardData = function (default_rule_count, default_example_count, data_from_uri) {
-  // We store the data in this format:
-  // [ CardGrid ]
-  //
-  // CardGrid
-  // {
-  //   name: string
-  //   rules: [Rules]
-  //   examples: [Examples]
-  //   exceptions: {}
-  //   cardScores: {}
-  // }
-  //
-  // Rule 
-  // {
-  //   target: string
-  //   source: string
-  // }
-  // Example
-  // {
-  //   target: string
-  //   source: string
-  // }
+  /* We store the data in this format:
+     [ CardGrid ]
+    
+     CardGrid
+     {
+       name: string
+       rules: [Rules]
+       examples: [Examples]
+       exceptions: {hashedRuleExampleType: string}
+       cardScores: {hashedRuleExample: [int]}
+     }
+    
+     Rule 
+     {
+       target: string
+       source: string
+     }
+
+     Example
+     {
+       target: string
+       source: string
+     }
+  */
   var card_data;
 
   function hashRuleExample(rule) {
     return JSON.stringify(rule);
   }
 
+  function makeSourceTarget(source_target_list) {
+    return {
+      source: source_target_list[0],
+      target: source_target_list[1]
+    };
+  }
+
   function sourceTargetObjListFromList(source_list, target_list) {
-    return d3.zip(source_list, target_list).map(function (d) {
-      return {
-        source: d[0],
-        target: d[1]
-      }
-    });
+    return d3.zip(source_list, target_list).map(makeSourceTarget);
   }
 
   // examples
   function addBlankExampleToCardGrid(cardGrid) {
-    cardGrid.examples.push({
-      target: '',
-      source: ''
-    });
+    cardGrid.examples.push(makeSourceTarget(['', '']));
   }
 
   function addBlankExample(index) {
@@ -54,10 +55,7 @@ var CardData = function (default_rule_count, default_example_count, data_from_ur
 
   //rules
   function addBlankRuleToCardGrid(cardGrid) {
-    cardGrid.rules.push({
-      target: '[term]',
-      source: '[term]'
-    });
+    cardGrid.rules.push(makeSourceTarget(['[term]', '[term]']));
   }
 
   function addBlankRule(index) {
@@ -173,7 +171,6 @@ var CardData = function (default_rule_count, default_example_count, data_from_ur
 var CardLogic = function (default_rule_count, default_example_count, data_from_uri) {
   var card_data;
 
-
   var EXAMPLE_PLACEHOLDER = '[term]',
     REPLACEMENT_REGEX = /\((\w+?)->(\w+?)\)/g;
 
@@ -273,8 +270,6 @@ var CardLogic = function (default_rule_count, default_example_count, data_from_u
 
     return result;
   }
-
-
 
   function getAllCards() {
     var matrix, flashCards;
