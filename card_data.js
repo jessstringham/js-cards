@@ -125,9 +125,6 @@ var CardData = function (default_rule_count, default_example_count, data_from_ur
   }
 
   // exceptions
-  function updateException(gridIndex, type, rule, example, new_exception) {
-    card_data[gridIndex].exceptions[hashTypeRuleExample(type, rule, example)] = new_exception;
-  }
 
   function getException(gridIndex, type, rule, example) {
     return card_data[gridIndex].exceptions[hashTypeRuleExample(type, rule, example)];
@@ -263,6 +260,9 @@ var CardData = function (default_rule_count, default_example_count, data_from_ur
       updateExamples: function (source_examples, target_examples) {
         card_data[index].examples = sourceTargetObjListFromList(source_examples, target_examples);
       },
+      updateException: function (data, new_exception) {
+        card_data[index].exceptions[hashTypeRuleExample(data.type, data.rule, data.example)] = new_exception;
+      }
     }
 
     function view() {

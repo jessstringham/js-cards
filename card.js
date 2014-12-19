@@ -56,7 +56,7 @@ var cards = (function () {
     var resultBox, inputBox;
 
     resultBox = d3.select(box);
-    resultBox.on('click', drawFinalResultsGrid); // remove click event
+    resultBox.on('click', null); // remove click event
     resultBox.text('');
 
     inputBox = resultBox.append('span');
@@ -68,7 +68,7 @@ var cards = (function () {
     d3.selectAll('tbody tr.example')
       .selectAll('td.result').selectAll('div').selectAll('input')
       .each(function (d) {
-        cardDataStore.content.updateException(d.data, this.value);
+        currentGrid.content.updateException(d, this.value);
       });
   }
 
