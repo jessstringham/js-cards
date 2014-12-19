@@ -25,8 +25,48 @@ var CardData = function (default_rule_count, default_example_count, data_from_ur
   */
   var card_data;
 
-  function hashRuleExample(rule) {
+  var EXAMPLE_PLACEHOLDER = '[term]',
+      REPLACEMENT_REGEX = /\((\w+?)->(\w+?)\)/g;
+
+  function applyRuleToExample(rule, example) {
+    if (example === '') {
+      return '';
+    }
+
+    var result = rule.replace(EXAMPLE_PLACEHOLDER, example),
+        match,
+        replace_this_string_len,
+        could_be_a_match;
+
+    match = REPLACEMENT_REGEX.exec(result);
+    if (match) {
+      result = result.replace(REPLACEMENT_REGEX, '');
+
+      // get the string right before it
+      replace_this_string_len = match[1].length;
+
+      could_be_a_match = result.substr(match.index - replace_this_string_len, replace_this_string_len);
+
+      if (could_be_a_match === match[1]) {
+        result = result.substr(0, match.index - replace_this_string_len)
+          + match[2]
+          + result.substr(match.index, result.length - 1);
+      }
+    }
+
+    return result;
+  }
+
+  function hashRuleExample(dataBit) {
     return JSON.stringify(rule);
+  }
+
+  function hashRuleAndExample(rule, example) {
+    return JSON.stringify([rule, example]);
+  }
+
+  function hashTypeRuleExample(type, rule, example) {
+    return JSON.stringify([type, rule, example]);
   }
 
   function makeSourceTarget(source_target_list) {
@@ -45,25 +85,9 @@ var CardData = function (default_rule_count, default_example_count, data_from_ur
     cardGrid.examples.push(makeSourceTarget(['', '']));
   }
 
-  function addBlankExample(index) {
-    addBlankExampleToCardGrid(card_data[index]);
-  }
-
-  function updateExamples(gridIndex, source_examples, target_examples) {
-    card_data[gridIndex].examples = sourceTargetObjListFromList(source_examples, target_examples);
-  }
-
   //rules
   function addBlankRuleToCardGrid(cardGrid) {
-    cardGrid.rules.push(makeSourceTarget(['[term]', '[term]']));
-  }
-
-  function addBlankRule(index) {
-    addBlankRuleToCardGrid(card_data[index]);
-  }
-
-  function updateRules(gridIndex, source_rules, target_rules) {
-    card_data[gridIndex].rules = sourceTargetObjListFromList(source_rules, target_rules);
+    cardGrid.rules.push(makeSourceTarget([EXAMPLE_PLACEHOLDER, EXAMPLE_PLACEHOLDER]));
   }
 
 
@@ -72,43 +96,45 @@ var CardData = function (default_rule_count, default_example_count, data_from_ur
     card_data.push(blankData());
   }
 
-  function setGridName(index, name) {
-    card_data[index].name = name;
+  function setGridName(index) {
+    return function (name) {
+      card_data[index].name = name;
+    }
   }
 
   function getGridName(index) {
     return card_data[index].name;
   }
 
-  function gridCount() {
-    return card_data.length;
+  function hashCardScore(rule, example) {
+    return hashRuleAndExample(rule, example)
   }
 
   // scores
-  function getCardScore(index, source_data) {
-    return card_data[index].cardScores[hashRuleExample(source_data)]
+  function getCardScore(index, rule, example) {
+    return card_data[index].cardScores[hashCardScore(rule, example)] || [];
   }
 
-  function updateCardScore(cardData, score) {
-    // TODO: this is complicated, rework
-    if (!card_data[cardData.gridIndex].cardScores.hasOwnProperty(hashRuleExample(cardData))) {
-      card_data[cardData.gridIndex].cardScores[hashRuleExample(cardData)] = [];
-    }
+  function updateCardScore(data, score) {
+    var hashedCardScore = hashCardScore(data.target.rule, data.target.example);
+    var cardScore = getCardScore(data.index, data.target.rule, data.target.example);
 
-    card_data[cardData.gridIndex].cardScores[hashRuleExample(cardData)].push(score);
+    cardScore.push(score);
+
+    card_data[data.index].cardScores[hashedCardScore] = cardScore;
   }
 
   // exceptions
-  function updateException(gridIndex, data, new_exception) {
-    card_data[gridIndex].exceptions[hashRuleExample(data)] = new_exception;
+  function updateException(gridIndex, type, rule, example, new_exception) {
+    card_data[gridIndex].exceptions[hashTypeRuleExample(type, rule, example)] = new_exception;
   }
 
-  function getException(gridIndex, data) {
-    return card_data[gridIndex].exceptions[hashRuleExample(data)];
+  function getException(gridIndex, type, rule, example) {
+    return card_data[gridIndex].exceptions[hashTypeRuleExample(type, rule, example)];
   }
 
-  function hasException(gridIndex, data) {
-    return card_data[gridIndex].exceptions.hasOwnProperty(hashRuleExample(data))
+  function hasException(gridIndex, type, rule, example) {
+    return card_data[gridIndex].exceptions.hasOwnProperty(hashTypeRuleExample(type, rule, example));
   }
 
 
@@ -134,8 +160,8 @@ var CardData = function (default_rule_count, default_example_count, data_from_ur
     return dataInfo;
   }
 
-  function getData(index) {
-    return card_data[index];
+  function dump() {
+    return card_data;
   }
 
   function initAllData(URIdataInfo) {
@@ -147,177 +173,133 @@ var CardData = function (default_rule_count, default_example_count, data_from_ur
     return [blankData()];
   }
 
+  function make_matrix_cell(index, type, rule_obj, example_obj) {
+    var current_rule = rule_obj[type],
+        current_example = example_obj[type];
+
+    if (hasException(index, type, current_rule, current_example)) {
+      isException = true;
+      text = getException(index, type, current_rule, current_example);
+    } else {
+      isException = false;
+      text = applyRuleToExample(current_rule, current_example);
+    }
+
+    return {
+      text: text,
+      type: type,
+      rule: current_rule,
+      example: current_example,
+      is_exception: isException,
+    };
+  }
+
+
   card_data = initAllData(data_from_uri);
 
-  return {
-    data: card_data,
-    getData: getData,
-    updateRules: updateRules,
-    addBlankRule: addBlankRule,
-    updateExamples: updateExamples,
-    addBlankExample: addBlankExample,
-    hasException: hasException,
-    updateException: updateException,
-    gridCount: gridCount,
-    setGridName: setGridName,
-    addGrid: addGrid,
-    getGridName: getGridName,
-    updateCardScore: updateCardScore,
-    getCardScore: getCardScore,
-  }
-};
 
+  
 
-var CardLogic = function (default_rule_count, default_example_count, data_from_uri) {
-  var card_data;
-
-  var EXAMPLE_PLACEHOLDER = '[term]',
-    REPLACEMENT_REGEX = /\((\w+?)->(\w+?)\)/g;
-
-  function applyRuleToExample(rule, example) {
-    var result,
-      match,
-      replace_this_string_len,
-      could_be_a_match;
-
-    if (example === '') {
-      return '';
+  function cardsView() {
+    function checkIfCellIsEmpty(cell) {
+      return (!(cell.source.text === "" || cell.target.text === ""));
     }
 
-    result = rule.replace(EXAMPLE_PLACEHOLDER, example);
-
-    match = REPLACEMENT_REGEX.exec(result);
-    if (match) {
-      result = result.replace(REPLACEMENT_REGEX, '');
-
-      // get the string right before it
-      replace_this_string_len = match[1].length;
-
-      could_be_a_match = result.substr(match.index - replace_this_string_len, replace_this_string_len);
-
-      if (could_be_a_match === match[1]) {
-        result = result.substr(0, match.index - replace_this_string_len)
-          + match[2]
-          + result.substr(match.index, result.length - 1);
-      }
-    }
-
-    return result;
+    return d3.merge(card_data.map(function (d, i) {
+      return d3.merge(grid(i).view().gridMatrix);
+    })).filter(checkIfCellIsEmpty);
   }
 
-
-  function pairOffData(index) {
-
-    function createMatrixDataForType(type, data) {
-      var isException, text;
-
-      if (card_data.hasException(index, data)) {
-        isException = true;
-        text = card_data.getException(index, data);
-      } else {
-        isException = false;
-        text = applyRuleToExample(data.rule, data.example);
-      }
-
+  function matricesView() {
+    return card_data.map(function (d, i) {
       return {
-        type: type,  // todo, data has and needs this, can we drop this one?
-        text: text,
-        is_exception: isException,
-        data: data
-      };
-    }
-
-    var result = [],
-      gridData = card_data.getData(index),
-      example_i,
-      rule_i,
-      newList,
-      current_rule,
-      current_example,
-      source_data,
-      target_data;
-
-    for (example_i = 0; example_i < gridData.examples.length; example_i++) {
-      newList = [];
-      for (rule_i = 0; rule_i < gridData.rules.length; rule_i++) {
-
-        // meh, we could do this earlier, but it's just lookup
-        current_rule = gridData.rules[rule_i];
-        current_example = gridData.examples[example_i];
-
-        source_data = {
-          type: 'source',
-          rule: current_rule.source,
-          example: current_example.source,
-          gridIndex: index
-        };
-
-        target_data = {
-          type: 'target',
-          rule: current_rule.target,
-          example: current_example.target,
-          gridIndex: index
-        };
-
-        newList.push({
-          source: createMatrixDataForType('source', source_data),
-          target: createMatrixDataForType('target', target_data),
-          score: card_data.getCardScore(index, source_data)
-        });
+        name: d.name,
+        data: grid(i).view().gridMatrix
       }
-      result.push(newList);
-    }
-
-    return result;
+    })
   }
 
-  function getAllCards() {
-    var matrix, flashCards;
 
-    function getFlattenMatrices(entry, i) {
-      matrix = pairOffData(i);
-
-      flashCards = matrix.reduce(function (a, b) {
-        return a.concat(b);
-      });
-
-      return flashCards.filter(checkIfCellIsEmpty);
-    }
-    // ugh, flatten it one more time
-    return card_data.data.map(getFlattenMatrices).reduce(function (a, b) {
-      return a.concat(b);
-    });
-    
+  grids = {
+    first: function () {return grid(0)},
+    last: function () {return grid(card_data.length - 1)},
+    add: addGrid,
   }
 
-  function checkIfCellIsEmpty(cell) {
-    return (!(cell.source.text === "" && cell.target.text === ""));
-  }
-
-  function clearMatrix(matrix) {
-    return matrix.filter(function (d) {
-      return (d[0].source.data.example !== "");
-    });
-  }
-
-  function getCleanMatrix() {
-    function getCleanMatrixAndName(entry, i) {
+  study = {
+    view: function () {
       return {
-        data: clearMatrix(cardDataStore.pairOffData(i)),
-        name: entry.name
-      };
+        cards: cardsView(),
+        matrices: matricesView(),
+      }
+    },
+    content: {
+      updateScore: updateCardScore
     }
-
-    return card_data.data.map(getCleanMatrixAndName);
   }
 
-  card_data = CardData(default_rule_count, default_example_count, data_from_uri);
+  function grid(index) {
+
+    var gridName = {
+      set: setGridName(index),
+      get: getGridName(index)
+    }
+
+    var gridInfo = {
+      is_first: index === 0,
+      is_last: index === card_data.length - 1
+    }
+
+    var content = {
+      addBlankRule: function () {
+        addBlankRuleToCardGrid(card_data[index]);
+      },
+      addBlankExample: function () {
+        addBlankExampleToCardGrid(card_data[index]);
+      },
+      updateRules: function (source_rules, target_rules) {
+        card_data[index].rules = sourceTargetObjListFromList(source_rules, target_rules);
+      },
+      updateExamples: function (source_examples, target_examples) {
+        card_data[index].examples = sourceTargetObjListFromList(source_examples, target_examples);
+      },
+    }
+
+    function view() {
+      return {
+        examples: card_data[index].examples,
+        rules: card_data[index].rules,
+        gridMatrix: card_data[index].examples.map(function (example) {
+          return card_data[index].rules.map(function (rule) {
+            return {
+              index: index,
+              score: getCardScore(index, rule.target, example.target),
+              source: make_matrix_cell(index, 'source', rule, example),
+              target: make_matrix_cell(index, 'target', rule, example)
+            };
+          });
+        }),
+      }
+    }
+
+    var navigate = {
+      next: function () { return grid(index + 1) },
+      previous: function () { return grid(index - 1)}
+    }
+
+    return {
+      name: gridName,
+      info: gridInfo,
+      view: view,
+      content: content,
+      navigate: navigate,
+    }
+  }
+
 
   return {
-    pairOffData: pairOffData,
-    getAllCards: getAllCards,
-    getCleanMatrix: getCleanMatrix,
-    data: card_data,
+    dump: dump,
+    grids: grids,
+    study: study
   }
-
 };
